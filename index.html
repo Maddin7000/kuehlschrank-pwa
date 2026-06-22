@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Kühlschrank">
+<meta name="theme-color" content="#1A5FA8">
+<meta name="description" content="Produkte mit MHD verwalten – rechtzeitig erinnert werden.">
+<link rel="manifest" href="./manifest.json">
+<title>Kühlschrank MHD</title>
+
+<!-- Barcode-Scanner Library (ZXing) -->
+<script src="https://unpkg.com/@zxing/browser@0.1.5/umd/index.min.js"></script>
+
+<style>
+  :root {
+    --blue:    #1A5FA8;
+    --blue-lt: #E8F1FB;
+    --blue-md: #2D7DD2;
+    --green:   #0F6E56;
+    --green-lt:#E1F5EE;
+    --amber:   #854F0B;
+    --amber-lt:#FAEEDA;
+    --red:     #A32D2D;
+    --red-lt:  #FCEBEB;
+    --bg:      #F2F6FB;
+    --surface: #FFFFFF;
+    --border:  rgba(26,95,168,.13);
+    --text:    #111827;
+    --muted:   #6B7280;
+    --radius:  14px;
+    --radius-sm: 9px;
+    font-size: 16px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:      #0D1117;
+      --surface: #161B22;
+      --border:  rgba(255,255,255,.10);
+      --text:    #E6EDF3;
+      --muted:   #8B949E;
+      --blue-lt: #0D2340;
+      --green-lt:#0A2E25;
+      --amber-lt:#2B1A04;
+      --red-lt:  #2A0E0E;
+    }
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; font-family: -apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif; background: var(--bg); color: var(--text); }
+
+  /* ── Layout ── */
+  #app { display: flex; flex-direction: column; height: 100%; max-width: 430px; margin: 0 auto; position: relative; }
+  .topbar { background: var(--surface); border-bottom: 0.5px solid var(--border); padding: env(safe-area-inset-top, 14px) 16px 12px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; padding-top: max(env(safe-area-inset-top), 14px); }
+  .topbar-title { display: flex; align-items: center; gap: 8px; }
+  .topbar-title h1 { font-size: 17px; font-weight: 600; letter-spacing: -.3px; }
+  .topbar-title .logo { width: 28px; height: 28px; background: var(--blue); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  .topbar-actions { display: flex; gap: 4px; }
+  .icon-btn { background: none; border: none; cursor: pointer; padding: 7px; border-radius: 10px; color: var(--muted); font-size: 20px; display: flex; align-items: center; transition: background .15s; }
+  .icon-btn:active { background: var(--bg); }
+  .icon-btn svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* ── Scroll area ── */
+  .scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: 100px; }
+
+  /* ── Stats ── */
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 14px 14px 6px; }
+  .stat { background: var(--surface); border-radius: var(--radius-sm); padding: 11px 8px; text-align: center; border: 0.5px solid var(--border); }
+  .stat-num { font-size: 26px; font-weight: 700; line-height: 1; }
+  .stat-lbl { font-size: 10px; font-weight: 500; color: var(--muted); margin-top: 3px; letter-spacing: .04em; text-transform: uppercase; }
+  .s-ok   .stat-num { color: var(--green); }
+  .s-warn .stat-num { color: var(--amber); }
+  .s-exp  .stat-num { color: var(--red); }
+
+  /* ── Filter tabs ── */
+  .tabs { display: flex; gap: 6px; padding: 8px 14px 4px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab { background: var(--surface); border: 0.5px solid var(--border); border-radius: 20px; padding: 5px 13px; font-size: 13px; font-weight: 500; color: var(--muted); cursor: pointer; white-space: nowrap; transition: all .15s; flex-shrink: 0; }
+  .tab.active { background: var(--blue); border-color: var(--blue); color: #fff; }
+
+  /* ── Section header ── */
+  .section-hd { font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; padding: 12px 14px 5px; }
+
+  /* ── Product cards ── */
+  .list { padding: 0 14px; display: flex; flex-direction: column; gap: 9px; }
+  .card { background: var(--surface); border-radius: var(--radius); border: 0.5px solid var(--border); padding: 13px 14px; user-select: none; }
+  .card-top { display: flex; align-items: center; gap: 11px; }
+  .card-emoji { width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+  .card-emoji.ok   { background: var(--green-lt); }
+  .card-emoji.warn { background: var(--amber-lt); }
+  .card-emoji.exp  { background: var(--red-lt); }
+  .card-body { flex: 1; min-width: 0; }
+  .card-name { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card-sub  { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .badge { font-size: 11px; font-weight: 600; padding: 4px 9px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; }
+  .badge.ok   { background: var(--green-lt); color: var(--green); }
+  .badge.warn { background: var(--amber-lt); color: var(--amber); }
+  .badge.exp  { background: var(--red-lt);   color: var(--red); }
+  .bar { height: 3px; border-radius: 3px; background: var(--bg); margin-top: 11px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 3px; transition: width .4s ease; }
+  .bar-fill.ok   { background: #1D9E75; }
+  .bar-fill.warn { background: #EF9F27; }
+  .bar-fill.exp  { background: #E24B4A; }
+  .del-btn { background: none; border: none; cursor: pointer; padding: 6px; color: var(--muted); border-radius: 8px; display: flex; align-items: center; flex-shrink: 0; }
+  .del-btn:active { background: var(--red-lt); color: var(--red); }
+  .del-btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* ── Empty state ── */
+  .empty { text-align: center; padding: 60px 24px 0; }
+  .empty-icon { font-size: 64px; margin-bottom: 16px; }
+  .empty-title { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+  .empty-sub { font-size: 14px; color: var(--muted); line-height: 1.6; }
+
+  /* ── FAB ── */
+  .fab-wrap { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; padding: 12px 14px max(env(safe-area-inset-bottom), 16px); background: linear-gradient(to top, var(--bg) 70%, transparent); pointer-events: none; }
+  .fab { width: 100%; background: var(--blue); color: #fff; border: none; border-radius: var(--radius); padding: 15px; font-size: 15px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; pointer-events: all; transition: background .15s, transform .1s; }
+  .fab:active { background: #154d8a; transform: scale(0.98); }
+  .fab svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* ── Toast ── */
+  .toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(20px); background: #111; color: #fff; padding: 10px 18px; border-radius: 30px; font-size: 13px; font-weight: 500; opacity: 0; transition: all .25s; z-index: 200; white-space: nowrap; pointer-events: none; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ── Bottom Sheet / Modal ── */
+  .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 100; align-items: flex-end; justify-content: center; backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); }
+  .overlay.open { display: flex; }
+  .sheet { background: var(--surface); border-radius: 20px 20px 0 0; padding: 0 0 max(env(safe-area-inset-bottom), 24px); width: 100%; max-width: 430px; max-height: 92vh; overflow-y: auto; animation: slideUp .28s ease; }
+  @keyframes slideUp { from { transform: translateY(30px); opacity: .6; } to { transform: translateY(0); opacity: 1; } }
+  .sheet-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 10px auto 0; }
+  .sheet-title { font-size: 17px; font-weight: 700; padding: 14px 16px 0; display: flex; align-items: center; justify-content: space-between; }
+  .sheet-body { padding: 16px 16px 0; }
+
+  /* ── Scanner ── */
+  .scan-box { position: relative; background: #000; border-radius: var(--radius); overflow: hidden; aspect-ratio: 1; margin-bottom: 14px; }
+  #video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .scan-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+  .scan-frame { width: 65%; aspect-ratio: 1; border: 2.5px solid rgba(255,255,255,.85); border-radius: 16px; box-shadow: 0 0 0 2000px rgba(0,0,0,.45); }
+  .scan-line { position: absolute; width: 60%; height: 2px; background: linear-gradient(to right, transparent, #fff, transparent); animation: scan 1.8s ease-in-out infinite; }
+  @keyframes scan { 0%,100% { top: 20%; } 50% { top: 75%; } }
+  .scan-hint { position: absolute; bottom: 14px; left: 0; right: 0; text-align: center; color: rgba(255,255,255,.8); font-size: 13px; font-weight: 500; }
+  .scan-status { text-align: center; font-size: 14px; color: var(--muted); padding: 10px 0 14px; min-height: 40px; }
+  .scan-status.success { color: var(--green); font-weight: 600; }
+  .scan-status.error   { color: var(--red); }
+
+  /* ── Form fields ── */
+  .field { margin-bottom: 14px; }
+  .field label { font-size: 13px; font-weight: 600; color: var(--muted); display: block; margin-bottom: 6px; }
+  .field input, .field select { width: 100%; background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 11px 13px; font-size: 15px; color: var(--text); -webkit-appearance: none; }
+  .field input:focus, .field select:focus { outline: none; border-color: var(--blue-md); box-shadow: 0 0 0 3px rgba(45,125,210,.18); }
+  .emoji-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-bottom: 14px; }
+  .emoji-opt { background: var(--bg); border: 1.5px solid transparent; border-radius: 10px; padding: 8px; font-size: 22px; text-align: center; cursor: pointer; transition: all .15s; }
+  .emoji-opt.selected { border-color: var(--blue-md); background: var(--blue-lt); }
+  .btn-row { display: grid; grid-template-columns: 1fr 2fr; gap: 10px; padding-top: 4px; }
+  .btn-cancel { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 13px; font-size: 15px; font-weight: 600; cursor: pointer; color: var(--muted); }
+  .btn-save   { background: var(--blue); border: none; border-radius: var(--radius-sm); padding: 13px; font-size: 15px; font-weight: 600; cursor: pointer; color: #fff; }
+  .btn-save:active { background: #154d8a; }
+
+  /* ── Notif permission banner ── */
+  .notif-bar { background: var(--amber-lt); border-bottom: 0.5px solid rgba(133,79,11,.2); padding: 10px 14px; display: flex; align-items: center; gap: 10px; cursor: pointer; flex-shrink: 0; }
+  .notif-bar p { font-size: 13px; color: var(--amber); font-weight: 500; flex: 1; }
+  .notif-bar span { font-size: 12px; font-weight: 700; color: var(--blue); white-space: nowrap; }
+  .notif-bar svg { width: 18px; height: 18px; stroke: var(--amber); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+
+  /* Search bar */
+  .search-wrap { padding: 8px 14px 4px; }
+  .search-wrap input { width: 100%; background: var(--surface); border: 0.5px solid var(--border); border-radius: 11px; padding: 9px 14px; font-size: 14px; color: var(--text); }
+  .search-wrap input::placeholder { color: var(--muted); }
+  .search-wrap input:focus { outline: none; border-color: var(--blue-md); }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <!-- Top bar -->
+  <div class="topbar">
+    <div class="topbar-title">
+      <div class="logo">🥛</div>
+      <h1>Kühlschrank</h1>
+    </div>
+    <div class="topbar-actions">
+      <button class="icon-btn" id="notif-toggle-btn" onclick="requestNotifications()" title="Benachrichtigungen aktivieren">
+        <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      </button>
+      <button class="icon-btn" onclick="openSettings()" title="Einstellungen">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Notification permission banner -->
+  <div class="notif-bar" id="notif-bar" onclick="requestNotifications()" style="display:none">
+    <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+    <p>Aktiviere Benachrichtigungen für MHD-Erinnerungen</p>
+    <span>Aktivieren →</span>
+  </div>
+
+  <div class="scroll">
+    <!-- Stats -->
+    <div class="stats">
+      <div class="stat s-ok"><div class="stat-num" id="cnt-ok">0</div><div class="stat-lbl">Frisch</div></div>
+      <div class="stat s-warn"><div class="stat-num" id="cnt-warn">0</div><div class="stat-lbl">Bald ab</div></div>
+      <div class="stat s-exp"><div class="stat-num" id="cnt-exp">0</div><div class="stat-lbl">Abgelaufen</div></div>
+    </div>
+
+    <!-- Filter tabs -->
+    <div class="tabs">
+      <div class="tab active" data-filter="all" onclick="setFilter('all',this)">Alle</div>
+      <div class="tab" data-filter="exp" onclick="setFilter('exp',this)">⚠️ Abgelaufen</div>
+      <div class="tab" data-filter="warn" onclick="setFilter('warn',this)">🕐 Bald ablaufend</div>
+      <div class="tab" data-filter="ok" onclick="setFilter('ok',this)">✅ Frisch</div>
+    </div>
+
+    <!-- Search -->
+    <div class="search-wrap">
+      <input type="search" id="search" placeholder="🔍  Produkt suchen…" oninput="render()" autocomplete="off">
+    </div>
+
+    <div class="section-hd" id="list-label">Produkte</div>
+    <div class="list" id="product-list"></div>
+  </div>
+
+  <!-- FAB -->
+  <div class="fab-wrap">
+    <button class="fab" onclick="openAdd()">
+      <svg viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+      Produkt scannen / hinzufügen
+    </button>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+</div>
+
+<!-- ════════════════ ADD PRODUCT MODAL ════════════════ -->
+<div class="overlay" id="overlay" onclick="overlayClick(event)">
+  <div class="sheet" id="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">
+      <span id="sheet-heading">Produkt hinzufügen</span>
+      <button class="icon-btn" onclick="closeAdd()">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body">
+      <!-- Scanner -->
+      <div class="scan-box" id="scan-box">
+        <video id="video" playsinline muted></video>
+        <div class="scan-overlay">
+          <div class="scan-frame"></div>
+          <div class="scan-line"></div>
+        </div>
+        <div class="scan-hint">Barcode auf Produkt richten</div>
+      </div>
+      <div class="scan-status" id="scan-status">Kamera wird gestartet…</div>
+
+      <!-- Emoji picker -->
+      <div class="field">
+        <label>Symbol</label>
+        <div class="emoji-grid" id="emoji-grid"></div>
+      </div>
+
+      <!-- Felder -->
+      <div class="field">
+        <label>Produktname *</label>
+        <input id="inp-name" type="text" placeholder="z.B. Vollmilch 3,5%" autocomplete="off">
+      </div>
+      <div class="field">
+        <label>Menge / Einheit</label>
+        <input id="inp-menge" type="text" placeholder="z.B. 1 Liter, 500g …" autocomplete="off">
+      </div>
+      <div class="field">
+        <label>Kategorie</label>
+        <select id="inp-kat">
+          <option value="">— keine —</option>
+          <option value="Milchprodukte">🥛 Milchprodukte</option>
+          <option value="Fleisch & Wurst">🥩 Fleisch & Wurst</option>
+          <option value="Gemüse & Obst">🥦 Gemüse & Obst</option>
+          <option value="Getränke">🍹 Getränke</option>
+          <option value="Käse">🧀 Käse</option>
+          <option value="Fertiggerichte">🍱 Fertiggerichte</option>
+          <option value="Sonstiges">📦 Sonstiges</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Mindesthaltbarkeitsdatum (MHD) *</label>
+        <input id="inp-mhd" type="date">
+      </div>
+
+      <div class="btn-row">
+        <button class="btn-cancel" onclick="closeAdd()">Abbrechen</button>
+        <button class="btn-save" onclick="saveProduct()">💾  Speichern</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ─────────────── State ─────────────── */
+let products = [];
+let filter = 'all';
+let selectedEmoji = '📦';
+let codeReader = null;
+let scanning = false;
+let editingId = null;
+
+const EMOJIS = ['🥛','🧈','🥚','🧀','🍗','🥩','🐟','🥦','🍅','🍎','🍊','🫙','🍺','🧃','🍹','🥗','🍱','🫐','🥕','🧄','📦','🍞','🥬','🫒'];
+
+/* ─────────────── Storage ─────────────── */
+function load() {
+  try { products = JSON.parse(localStorage.getItem('fridge_v2') || '[]'); } catch(e) { products = []; }
+}
+function persist() {
+  localStorage.setItem('fridge_v2', JSON.stringify(products));
+  sendToSW();
+}
+
+/* ─────────────── Date helpers ─────────────── */
+function today() { const d = new Date(); d.setHours(0,0,0,0); return d; }
+function daysLeft(mhd) {
+  const t = today(), m = new Date(mhd); m.setHours(0,0,0,0);
+  return Math.round((m - t) / 86400000);
+}
+function statusOf(d) { return d < 0 ? 'exp' : d <= 2 ? 'warn' : 'ok'; }
+function fmtDate(s) { if (!s) return '–'; const [y,m,d] = s.split('-'); return `${d}.${m}.${y}`; }
+function badgeText(d) {
+  if (d < 0) return `${Math.abs(d)} Tag${Math.abs(d)===1?'':'en'} überfällig`;
+  if (d === 0) return 'Heute!';
+  if (d === 1) return 'Morgen';
+  return `${d} Tage`;
+}
+function barPct(d, st) {
+  if (st === 'exp') return 100;
+  if (st === 'warn') return Math.max(15, 100 - (d / 3) * 80);
+  return Math.min(100, Math.max(10, 100 - (d / 30) * 90));
+}
+
+/* ─────────────── Render ─────────────── */
+function render() {
+  const q = (document.getElementById('search').value || '').toLowerCase();
+  const t = today();
+  let ok=0, warn=0, exp=0;
+  products.forEach(p => { const st = statusOf(daysLeft(p.mhd)); if(st==='ok')ok++; else if(st==='warn')warn++; else exp++; });
+  document.getElementById('cnt-ok').textContent = ok;
+  document.getElementById('cnt-warn').textContent = warn;
+  document.getElementById('cnt-exp').textContent = exp;
+
+  let list = [...products];
+  if (filter !== 'all') list = list.filter(p => statusOf(daysLeft(p.mhd)) === filter);
+  if (q) list = list.filter(p => p.name.toLowerCase().includes(q) || (p.kat||'').toLowerCase().includes(q));
+  list.sort((a,b) => daysLeft(a.mhd) - daysLeft(b.mhd));
+
+  const el = document.getElementById('product-list');
+  document.getElementById('list-label').textContent = `${list.length} Produkt${list.length!==1?'e':''}`;
+
+  if (!list.length) {
+    el.innerHTML = `<div class="empty">
+      <div class="empty-icon">${filter==='exp'?'✅':filter==='warn'?'🎉':'🧊'}</div>
+      <div class="empty-title">${filter==='all'&&!q ? 'Noch leer!' : 'Nichts gefunden'}</div>
+      <div class="empty-sub">${filter==='all'&&!q ? 'Scanne dein erstes Produkt.' : 'Versuch einen anderen Filter.'}</div>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = list.map(p => {
+    const d = daysLeft(p.mhd), st = statusOf(d);
+    const pct = Math.round(barPct(d, st));
+    return `<div class="card" onclick="editProduct('${p.id}')">
+      <div class="card-top">
+        <div class="card-emoji ${st}">${p.emoji||'📦'}</div>
+        <div class="card-body">
+          <div class="card-name">${p.name}</div>
+          <div class="card-sub">${[p.menge, p.kat, 'MHD: '+fmtDate(p.mhd)].filter(Boolean).join(' · ')}</div>
+        </div>
+        <span class="badge ${st}">${badgeText(d)}</span>
+        <button class="del-btn" onclick="event.stopPropagation();delProduct('${p.id}')" aria-label="Löschen">
+          <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        </button>
+      </div>
+      <div class="bar"><div class="bar-fill ${st}" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+}
+
+function setFilter(f, el) {
+  filter = f;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  render();
+}
+
+/* ─────────────── Scanner ─────────────── */
+async function startScanner() {
+  const statusEl = document.getElementById('scan-status');
+  try {
+    if (typeof ZXingBrowser === 'undefined') {
+      statusEl.textContent = 'Scanner-Bibliothek nicht geladen. Bitte Name manuell eingeben.';
+      statusEl.className = 'scan-status error';
+      return;
+    }
+    const hints = new Map();
+    hints.set(ZXingBrowser.DecodeHintType?.TRY_HARDER, true);
+    codeReader = new ZXingBrowser.BrowserMultiFormatReader(hints);
+    const devices = await ZXingBrowser.BrowserMultiFormatReader.listVideoInputDevices();
+    if (!devices.length) { statusEl.textContent = 'Keine Kamera gefunden.'; statusEl.className='scan-status error'; return; }
+    const backCam = devices.find(d => /back|rear|environment/i.test(d.label)) || devices[devices.length - 1];
+    statusEl.textContent = 'Barcode in den Rahmen halten …';
+    scanning = true;
+    await codeReader.decodeFromVideoDevice(backCam.deviceId, 'video', (result, err) => {
+      if (result && scanning) {
+        scanning = false;
+        onBarcodeFound(result.getText());
+      }
+    });
+  } catch(e) {
+    statusEl.textContent = 'Kamera-Zugriff verweigert. Bitte manuell eingeben.';
+    statusEl.className = 'scan-status error';
+  }
+}
+
+function stopScanner() {
+  scanning = false;
+  if (codeReader) { try { codeReader.reset(); } catch(e) {} codeReader = null; }
+}
+
+function onBarcodeFound(barcode) {
+  const statusEl = document.getElementById('scan-status');
+  statusEl.textContent = `✅ Barcode: ${barcode}`;
+  statusEl.className = 'scan-status success';
+  // Produkt-DB-Lookup (Open Food Facts)
+  lookupBarcode(barcode);
+}
+
+async function lookupBarcode(code) {
+  const statusEl = document.getElementById('scan-status');
+  statusEl.textContent = `Produkt wird gesucht (${code})…`;
+  try {
+    const r = await fetch(`https://world.openfoodfacts.org/api/v0/product/${code}.json`);
+    const j = await r.json();
+    if (j.status === 1 && j.product) {
+      const p = j.product;
+      const name = p.product_name_de || p.product_name || p.generic_name_de || p.generic_name || '';
+      const menge = p.quantity || '';
+      if (name) {
+        document.getElementById('inp-name').value = name;
+        document.getElementById('inp-menge').value = menge;
+        statusEl.textContent = `✅ Gefunden: ${name}`;
+        statusEl.className = 'scan-status success';
+        // Auto-Emoji
+        const cats = (p.categories || '').toLowerCase();
+        if (cats.includes('milch') || cats.includes('joghurt')) pickEmoji('🥛');
+        else if (cats.includes('käse') || cats.includes('cheese')) pickEmoji('🧀');
+        else if (cats.includes('fleisch') || cats.includes('wurst') || cats.includes('meat')) pickEmoji('🥩');
+        else if (cats.includes('ei') || cats.includes('egg')) pickEmoji('🥚');
+        else if (cats.includes('fisch') || cats.includes('fish')) pickEmoji('🐟');
+        else if (cats.includes('getränk') || cats.includes('saft') || cats.includes('juice')) pickEmoji('🧃');
+        document.getElementById('inp-mhd').focus();
+        return;
+      }
+    }
+    statusEl.textContent = `Produkt nicht gefunden – bitte Namen eingeben.`;
+    statusEl.className = 'scan-status';
+    document.getElementById('inp-name').focus();
+  } catch(e) {
+    statusEl.textContent = `Offline – bitte Namen manuell eingeben.`;
+    statusEl.className = 'scan-status';
+  }
+}
+
+/* ─────────────── Add / Edit ─────────────── */
+function openAdd() {
+  editingId = null;
+  selectedEmoji = '📦';
+  document.getElementById('sheet-heading').textContent = 'Produkt hinzufügen';
+  document.getElementById('inp-name').value = '';
+  document.getElementById('inp-menge').value = '';
+  document.getElementById('inp-kat').value = '';
+  // Default MHD = today + 7 Tage
+  const def = new Date(); def.setDate(def.getDate() + 7);
+  document.getElementById('inp-mhd').value = def.toISOString().split('T')[0];
+  buildEmojiGrid();
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('scan-status').textContent = 'Kamera wird gestartet…';
+  document.getElementById('scan-status').className = 'scan-status';
+  setTimeout(startScanner, 300);
+}
+
+function editProduct(id) {
+  const p = products.find(x => x.id === id);
+  if (!p) return;
+  editingId = id;
+  selectedEmoji = p.emoji || '📦';
+  document.getElementById('sheet-heading').textContent = 'Produkt bearbeiten';
+  document.getElementById('inp-name').value = p.name;
+  document.getElementById('inp-menge').value = p.menge || '';
+  document.getElementById('inp-kat').value = p.kat || '';
+  document.getElementById('inp-mhd').value = p.mhd;
+  buildEmojiGrid();
+  document.getElementById('scan-status').textContent = 'Barcode neu scannen oder Name ändern.';
+  document.getElementById('overlay').classList.add('open');
+  setTimeout(startScanner, 300);
+}
+
+function closeAdd() {
+  stopScanner();
+  document.getElementById('overlay').classList.remove('open');
+}
+
+function overlayClick(e) {
+  if (e.target === document.getElementById('overlay')) closeAdd();
+}
+
+function buildEmojiGrid() {
+  document.getElementById('emoji-grid').innerHTML = EMOJIS.map(em =>
+    `<div class="emoji-opt ${em===selectedEmoji?'selected':''}" onclick="pickEmoji('${em}')">${em}</div>`
+  ).join('');
+}
+
+function pickEmoji(em) {
+  selectedEmoji = em;
+  document.querySelectorAll('.emoji-opt').forEach(el => {
+    el.classList.toggle('selected', el.textContent === em);
+  });
+}
+
+function saveProduct() {
+  const name = document.getElementById('inp-name').value.trim();
+  const mhd  = document.getElementById('inp-mhd').value;
+  if (!name) { showToast('Bitte Produktname eingeben'); return; }
+  if (!mhd)  { showToast('Bitte MHD angeben'); return; }
+
+  if (editingId) {
+    const idx = products.findIndex(p => p.id === editingId);
+    if (idx >= 0) {
+      products[idx] = { ...products[idx], name, mhd,
+        menge: document.getElementById('inp-menge').value.trim(),
+        kat:   document.getElementById('inp-kat').value,
+        emoji: selectedEmoji };
+    }
+    showToast('✅ Produkt aktualisiert');
+  } else {
+    products.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2,5),
+      name, mhd,
+      menge: document.getElementById('inp-menge').value.trim(),
+      kat:   document.getElementById('inp-kat').value,
+      emoji: selectedEmoji });
+    showToast('✅ Produkt gespeichert');
+  }
+  persist();
+  render();
+  closeAdd();
+  scheduleCheck();
+}
+
+function delProduct(id) {
+  const p = products.find(x => x.id === id);
+  if (!p) return;
+  if (!confirm(`„${p.name}" löschen?`)) return;
+  products = products.filter(x => x.id !== id);
+  persist();
+  render();
+  showToast('🗑️ Gelöscht');
+}
+
+/* ─────────────── Notifications ─────────────── */
+async function requestNotifications() {
+  if (!('Notification' in window)) { showToast('Benachrichtigungen nicht unterstützt'); return; }
+  const perm = await Notification.requestPermission();
+  if (perm === 'granted') {
+    document.getElementById('notif-bar').style.display = 'none';
+    showToast('🔔 Benachrichtigungen aktiviert!');
+    scheduleCheck();
+  } else {
+    showToast('Bitte in Safari-Einstellungen erlauben');
+  }
+}
+
+function scheduleCheck() {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  // Sofortiger Check
+  doMhdCheck();
+  // Täglich wiederholen (alle 24h, nur solange Tab offen)
+  clearInterval(window._mhdInterval);
+  window._mhdInterval = setInterval(doMhdCheck, 24 * 60 * 60 * 1000);
+}
+
+function doMhdCheck() {
+  const warn = products.filter(p => { const d = daysLeft(p.mhd); return d >= 0 && d <= 2; });
+  const exp  = products.filter(p => daysLeft(p.mhd) < 0);
+  if (warn.length || exp.length) {
+    let body = '';
+    if (exp.length)  body += `⚠️ Abgelaufen: ${exp.map(p=>p.name).join(', ')}. `;
+    if (warn.length) body += `🕐 Bald: ${warn.map(p=>p.name).join(', ')}.`;
+    new Notification('🥛 Kühlschrank-Reminder', { body: body.trim(), tag: 'mhd', renotify: true });
+  }
+  // Service Worker informieren
+  sendToSW();
+}
+
+function sendToSW() {
+  if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+    navigator.serviceWorker.controller.postMessage({ type: 'CHECK_MHD', products });
+  }
+}
+
+function checkNotifBar() {
+  if (!('Notification' in window)) return;
+  if (Notification.permission !== 'granted') {
+    document.getElementById('notif-bar').style.display = 'flex';
+  }
+}
+
+/* ─────────────── Settings ─────────────── */
+function openSettings() {
+  const exp = confirm('Alle abgelaufenen Produkte löschen?\n\nOK = Abgelaufene löschen\nAbbrechen = Behalten');
+  if (exp) {
+    products = products.filter(p => daysLeft(p.mhd) >= 0);
+    persist(); render();
+    showToast('🗑️ Abgelaufene gelöscht');
+  }
+}
+
+/* ─────────────── Toast ─────────────── */
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+/* ─────────────── Service Worker ─────────────── */
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').then(reg => {
+    console.log('SW registered', reg.scope);
+  }).catch(e => console.warn('SW error', e));
+}
+
+/* ─────────────── Init ─────────────── */
+load();
+render();
+checkNotifBar();
+scheduleCheck();
+
+// Täglich beim App-Start prüfen (beim Öffnen der App)
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') { doMhdCheck(); render(); }
+});
+</script>
+</body>
+</html>
