@@ -93,7 +93,7 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,'SF Pro Text','H
 .qty-row{display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:0.5px solid var(--border);}
 .qty-lbl{font-size:12px;color:var(--muted);flex:1;}
 .qty-val{font-size:14px;font-weight:600;min-width:36px;text-align:center;}
-.qty-btn{width:30px;height:30px;border-radius:50%;border:0.5px solid var(--border);background:var(--bg);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;color:var(--text);flex-shrink:0;font-weight:300;}
+.qty-btn{width:30px;height:30px;border-radius:50%;border:0.5px solid var(--border);background:var(--bg);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;color:var(--text);flex-shrink:0;font-weight:400;}
 .qty-btn:active{background:var(--blue-lt);}
 .qty-empty{color:var(--red);font-weight:600;}
 
@@ -267,7 +267,7 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,'SF Pro Text','H
         <div class="cal-legend-item"><div class="cal-legend-dot exp"></div>Abgelaufen</div>
       </div>
       <div class="cal-grid" id="cal-grid"></div>
-      <div id="cal-detail"></div>
+      <div id="cal-detail" style="margin-bottom:16px;"></div>
     </div>
 
   </div>
@@ -405,9 +405,9 @@ function load() { try { products = JSON.parse(localStorage.getItem('fridge_v2')|
 function persist() { localStorage.setItem('fridge_v2', JSON.stringify(products)); sendToSW(); }
 function loadSettings() {
   warnDays = parseInt(localStorage.getItem('warnDays')||'2', 10);
+  sortMode = localStorage.getItem('sortMode')||'mhd';
   const ss = document.getElementById('sort-select');
-  const saved = localStorage.getItem('sortMode')||'mhd';
-  ss.value = saved; sortMode = saved;
+  if(ss) ss.value = sortMode;
 }
 
 /* ══ DATE HELPERS ══ */
@@ -430,7 +430,7 @@ function isoDate(d) { return d.toISOString().split('T')[0]; }
 /* ══ VIEW SWITCHING ══ */
 function switchView(v) {
   document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
-  document.querySelectorAll('.nav-btn').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.nav-btn:not(#nav-add)').forEach(el=>el.classList.remove('active'));
   document.getElementById('view-'+v).classList.add('active');
   document.getElementById('nav-'+v).classList.add('active');
   if(v==='cal') renderCal();
@@ -438,8 +438,8 @@ function switchView(v) {
 
 /* ══ RENDER LIST ══ */
 function render() {
-  sortMode = document.getElementById('sort-select').value;
-  localStorage.setItem('sortMode', sortMode);
+  const ss = document.getElementById('sort-select');
+  if(ss && ss.value) { sortMode = ss.value; localStorage.setItem('sortMode', sortMode); }
 
   const q=(document.getElementById('search').value||'').toLowerCase();
   let ok=0,warn=0,exp=0;
@@ -627,7 +627,7 @@ async function startScanner() {
     }catch(e){}
   }
   if(typeof Quagga==='undefined'){statusEl.textContent='Scanner nicht geladen – Namen manuell eingeben.';statusEl.className='scan-status error';return;}
-  Quagga.init({inputStream:{name:'Live',type:'LiveStream',target:document.getElementById('video'),constraints:{facingMode:'environment',width:1280,height:720}},decoder:{readers:['ean_reader','ean_8_reader','upc_reader','code_128_reader','code_39_reader']},locate:true,numOfWorkers:0,frequency:5},function(err){
+  Quagga.init({inputStream:{name:'Live',type:'LiveStream',target:document.getElementById('scan-box'),constraints:{facingMode:'environment',width:1280,height:720}},decoder:{readers:['ean_reader','ean_8_reader','upc_reader','code_128_reader','code_39_reader']},locate:true,numOfWorkers:0,frequency:5},function(err){
     if(err){statusEl.textContent='Scanner-Fehler – Namen manuell eingeben.';statusEl.className='scan-status error';return;}
     quaggaRunning=true; Quagga.start();
   });
@@ -717,7 +717,7 @@ function closeAdd(){stopScanner();document.getElementById('overlay').classList.r
 function buildEmojiGrid(){
   document.getElementById('emoji-grid').innerHTML=EMOJIS.map(em=>`<div class="emoji-opt ${em===selectedEmoji?'selected':''}" onclick="pickEmoji('${em}')">${em}</div>`).join('');
 }
-function pickEmoji(em){selectedEmoji=em;document.querySelectorAll('.emoji-opt').forEach(el=>el.classList.toggle('selected',el.textContent===em));}
+function pickEmoji(em){selectedEmoji=em;document.querySelectorAll('.emoji-opt').forEach(el=>el.classList.toggle('selected',el.textContent.trim()===em));}
 
 function saveProduct(){
   const name=document.getElementById('inp-name').value.trim();
@@ -773,6 +773,7 @@ function scheduleCheck(){
 }
 
 function doMhdCheck(){
+  if(!products.length) return;
   const warn=products.filter(p=>{const d=daysLeft(p.mhd);return d>=0&&d<=warnDays;});
   const exp=products.filter(p=>daysLeft(p.mhd)<0);
   if(warn.length||exp.length){
@@ -871,7 +872,11 @@ checkNotifBar();
 scheduleCheck();
 
 document.addEventListener('visibilitychange',()=>{
-  if(document.visibilityState==='visible'){doMhdCheck();render();}
+  if(document.visibilityState==='visible'){
+    doMhdCheck();
+    render();
+    if(document.getElementById('view-cal').classList.contains('active')) renderCal();
+  }
 });
 </script>
 </body>
