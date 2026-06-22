@@ -162,7 +162,15 @@
   .notif-bar span { font-size: 12px; font-weight: 700; color: var(--blue); white-space: nowrap; }
   .notif-bar svg { width: 18px; height: 18px; stroke: var(--amber); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
 
-  /* Search bar */
+  /* ── Settings sheet ── */
+  .settings-section {}
+  .settings-label { font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px; }
+  .settings-card { background:var(--bg);border-radius:var(--radius-sm);padding:14px; }
+  .settings-row { display:flex;align-items:flex-start;gap:12px; }
+  .settings-row-title { font-size:15px;font-weight:500;color:var(--text); }
+  .settings-row-sub { font-size:12px;color:var(--muted);margin-top:2px;line-height:1.5; }
+
+
   .search-wrap { padding: 8px 14px 4px; }
   .search-wrap input { width: 100%; background: var(--surface); border: 0.5px solid var(--border); border-radius: 11px; padding: 9px 14px; font-size: 14px; color: var(--text); }
   .search-wrap input::placeholder { color: var(--muted); }
@@ -230,6 +238,86 @@
 
   <!-- Toast -->
   <div class="toast" id="toast"></div>
+</div>
+
+<!-- ════════════════ SETTINGS MODAL ════════════════ -->
+<div class="overlay" id="settings-overlay" onclick="settingsOverlayClick(event)">
+  <div class="sheet" id="settings-sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title">
+      <span>Einstellungen</span>
+      <button class="icon-btn" onclick="closeSettings()">
+        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body">
+
+      <!-- Vorwarnzeit -->
+      <div class="settings-section">
+        <div class="settings-label">🔔 Benachrichtigungen</div>
+        <div class="settings-card">
+          <div class="settings-row">
+            <div>
+              <div class="settings-row-title">Vorwarnzeit</div>
+              <div class="settings-row-sub">Erinnerung <span id="days-display" style="font-weight:600;color:var(--blue)">2 Tage</span> vor Ablauf</div>
+            </div>
+          </div>
+          <div style="margin-top:14px;">
+            <input type="range" id="warn-days-slider" min="1" max="14" value="2" step="1"
+              oninput="updateDaysPreview(this.value)" onchange="saveDaysSetting(this.value)"
+              style="width:100%;">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:4px;">
+              <span>1 Tag</span>
+              <span>3</span>
+              <span>5</span>
+              <span>7</span>
+              <span>10</span>
+              <span>14 Tage</span>
+            </div>
+          </div>
+          <div id="warn-preview" style="margin-top:12px;padding:10px 12px;background:var(--amber-lt);border-radius:var(--radius-sm);font-size:13px;color:var(--amber);"></div>
+        </div>
+
+        <div class="settings-card" style="margin-top:10px;">
+          <div class="settings-row" style="justify-content:space-between;">
+            <div>
+              <div class="settings-row-title">Push-Benachrichtigungen</div>
+              <div class="settings-row-sub" id="notif-status-text">Status wird geladen…</div>
+            </div>
+            <button id="notif-toggle" onclick="toggleNotifFromSettings()" style="background:var(--blue);border:none;border-radius:20px;color:#fff;font-size:13px;font-weight:600;padding:7px 14px;cursor:pointer;white-space:nowrap;flex-shrink:0;"></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Produkte -->
+      <div class="settings-section" style="margin-top:20px;">
+        <div class="settings-label">📦 Produkte</div>
+        <div class="settings-card">
+          <div class="settings-row" style="justify-content:space-between;align-items:center;">
+            <div>
+              <div class="settings-row-title">Abgelaufene löschen</div>
+              <div class="settings-row-sub">Alle Produkte mit überschrittenem MHD entfernen</div>
+            </div>
+            <button onclick="deleteExpiredFromSettings()" style="background:var(--red-lt);border:none;border-radius:var(--radius-sm);color:var(--red);font-size:13px;font-weight:600;padding:8px 14px;cursor:pointer;white-space:nowrap;flex-shrink:0;">Löschen</button>
+          </div>
+        </div>
+        <div class="settings-card" style="margin-top:10px;">
+          <div class="settings-row" style="justify-content:space-between;align-items:center;">
+            <div>
+              <div class="settings-row-title">Alle Daten löschen</div>
+              <div class="settings-row-sub">Gesamten Kühlschrankinhalt zurücksetzen</div>
+            </div>
+            <button onclick="deleteAllFromSettings()" style="background:var(--red-lt);border:none;border-radius:var(--radius-sm);color:var(--red);font-size:13px;font-weight:600;padding:8px 14px;cursor:pointer;white-space:nowrap;flex-shrink:0;">Zurücksetzen</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Info -->
+      <div style="margin-top:20px;padding:0 2px 8px;font-size:12px;color:var(--muted);text-align:center;line-height:1.8;">
+        Kühlschrank MHD · PWA v1.1<br>Daten werden lokal auf deinem Gerät gespeichert.
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- ════════════════ ADD PRODUCT MODAL ════════════════ -->
@@ -320,7 +408,7 @@ function daysLeft(mhd) {
   const t = today(), m = new Date(mhd); m.setHours(0,0,0,0);
   return Math.round((m - t) / 86400000);
 }
-function statusOf(d) { return d < 0 ? 'exp' : d <= 2 ? 'warn' : 'ok'; }
+function statusOf(d) { return d < 0 ? 'exp' : d <= warnDays ? 'warn' : 'ok'; }
 function fmtDate(s) { if (!s) return '–'; const [y,m,d] = s.split('-'); return `${d}.${m}.${y}`; }
 function badgeText(d) {
   if (d < 0) return `${Math.abs(d)} Tag${Math.abs(d)===1?'':'en'} überfällig`;
@@ -665,21 +753,20 @@ function scheduleCheck() {
 }
 
 function doMhdCheck() {
-  const warn = products.filter(p => { const d = daysLeft(p.mhd); return d >= 0 && d <= 2; });
+  const warn = products.filter(p => { const d = daysLeft(p.mhd); return d >= 0 && d <= warnDays; });
   const exp  = products.filter(p => daysLeft(p.mhd) < 0);
   if (warn.length || exp.length) {
     let body = '';
     if (exp.length)  body += `⚠️ Abgelaufen: ${exp.map(p=>p.name).join(', ')}. `;
-    if (warn.length) body += `🕐 Bald: ${warn.map(p=>p.name).join(', ')}.`;
+    if (warn.length) body += `🕐 In ≤${warnDays} Tag${warnDays===1?'':'en'}: ${warn.map(p=>p.name).join(', ')}.`;
     new Notification('🥛 Kühlschrank-Reminder', { body: body.trim(), tag: 'mhd', renotify: true });
   }
-  // Service Worker informieren
   sendToSW();
 }
 
 function sendToSW() {
   if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-    navigator.serviceWorker.controller.postMessage({ type: 'CHECK_MHD', products });
+    navigator.serviceWorker.controller.postMessage({ type: 'CHECK_MHD', products, warnDays });
   }
 }
 
@@ -691,13 +778,113 @@ function checkNotifBar() {
 }
 
 /* ─────────────── Settings ─────────────── */
+let warnDays = 2;
+
+function loadSettings() {
+  warnDays = parseInt(localStorage.getItem('warnDays') || '2', 10);
+}
+
 function openSettings() {
-  const exp = confirm('Alle abgelaufenen Produkte löschen?\n\nOK = Abgelaufene löschen\nAbbrechen = Behalten');
-  if (exp) {
-    products = products.filter(p => daysLeft(p.mhd) >= 0);
-    persist(); render();
-    showToast('🗑️ Abgelaufene gelöscht');
+  // Slider auf gespeicherten Wert setzen
+  const slider = document.getElementById('warn-days-slider');
+  slider.value = warnDays;
+  updateDaysPreview(warnDays);
+  // Notification-Status aktualisieren
+  updateNotifStatus();
+  document.getElementById('settings-overlay').classList.add('open');
+}
+
+function closeSettings() {
+  document.getElementById('settings-overlay').classList.remove('open');
+}
+
+function settingsOverlayClick(e) {
+  if (e.target === document.getElementById('settings-overlay')) closeSettings();
+}
+
+function updateDaysPreview(val) {
+  const n = parseInt(val, 10);
+  document.getElementById('days-display').textContent = `${n} Tag${n === 1 ? '' : 'e'}`;
+  const preview = document.getElementById('warn-preview');
+  // Zeige betroffene Produkte mit aktuellem Schwellwert
+  const affected = products.filter(p => { const d = daysLeft(p.mhd); return d >= 0 && d <= n; });
+  const exp = products.filter(p => daysLeft(p.mhd) < 0);
+  if (affected.length === 0 && exp.length === 0) {
+    preview.textContent = `✅ Aktuell keine Produkte innerhalb der Vorwarnzeit.`;
+  } else {
+    let msg = '';
+    if (exp.length) msg += `⚠️ ${exp.length} abgelaufen. `;
+    if (affected.length) msg += `🕐 ${affected.length} Produkt${affected.length>1?'e':''} würde${affected.length>1?'n':''} eine Erinnerung auslösen: ${affected.map(p=>p.name).slice(0,3).join(', ')}${affected.length>3?'…':''}.`;
+    preview.textContent = msg.trim();
   }
+}
+
+function saveDaysSetting(val) {
+  warnDays = parseInt(val, 10);
+  localStorage.setItem('warnDays', warnDays);
+  showToast(`✅ Vorwarnzeit: ${warnDays} Tag${warnDays===1?'':'e'}`);
+  scheduleCheck();
+}
+
+function updateNotifStatus() {
+  const btn = document.getElementById('notif-toggle');
+  const txt = document.getElementById('notif-status-text');
+  if (!('Notification' in window)) {
+    txt.textContent = 'Nicht unterstützt (iOS 16.4+ erforderlich)';
+    btn.textContent = '–'; btn.disabled = true;
+    return;
+  }
+  const perm = Notification.permission;
+  if (perm === 'granted') {
+    txt.textContent = 'Aktiv – du wirst rechtzeitig erinnert.';
+    btn.textContent = 'Testen';
+    btn.style.background = 'var(--green)';
+  } else if (perm === 'denied') {
+    txt.textContent = 'Blockiert – bitte in Safari-Einstellungen erlauben.';
+    btn.textContent = 'Einstellungen';
+    btn.style.background = 'var(--red)';
+  } else {
+    txt.textContent = 'Noch nicht aktiviert.';
+    btn.textContent = 'Aktivieren';
+    btn.style.background = 'var(--blue)';
+  }
+}
+
+async function toggleNotifFromSettings() {
+  if (!('Notification' in window)) return;
+  const perm = Notification.permission;
+  if (perm === 'granted') {
+    // Test-Benachrichtigung senden
+    new Notification('🥛 Test-Erinnerung', {
+      body: `Du bekommst Erinnerungen ${warnDays} Tag${warnDays===1?'':'e'} vor Ablauf.`,
+      tag: 'test'
+    });
+    showToast('🔔 Test-Benachrichtigung gesendet!');
+  } else if (perm === 'denied') {
+    // iOS: kann man nicht per JS entsperren, User muss in Einstellungen
+    showToast('Bitte in Einstellungen → Safari → erlauben');
+  } else {
+    await requestNotifications();
+    updateNotifStatus();
+  }
+}
+
+function deleteExpiredFromSettings() {
+  const n = products.filter(p => daysLeft(p.mhd) < 0).length;
+  if (n === 0) { showToast('Keine abgelaufenen Produkte'); return; }
+  if (!confirm(`${n} abgelaufene${n>1?' Produkte':' Produkt'} wirklich löschen?`)) return;
+  products = products.filter(p => daysLeft(p.mhd) >= 0);
+  persist(); render();
+  showToast(`🗑️ ${n} Produkt${n>1?'e':''} gelöscht`);
+  updateDaysPreview(warnDays);
+}
+
+function deleteAllFromSettings() {
+  if (!confirm(`Alle ${products.length} Produkte löschen? Das kann nicht rückgängig gemacht werden.`)) return;
+  products = [];
+  persist(); render();
+  showToast('🗑️ Alle Daten gelöscht');
+  closeSettings();
 }
 
 /* ─────────────── Toast ─────────────── */
@@ -717,6 +904,7 @@ if ('serviceWorker' in navigator) {
 }
 
 /* ─────────────── Init ─────────────── */
+loadSettings();
 load();
 render();
 checkNotifBar();

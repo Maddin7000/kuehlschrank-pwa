@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kuehlschrank-v2';
+const CACHE_NAME = 'kuehlschrank-v3';
 const ASSETS = ['./', './index.html', './manifest.json'];
 
 self.addEventListener('install', e => {
@@ -48,17 +48,18 @@ self.addEventListener('notificationclick', e => {
 // Täglicher MHD-Check (via Background Sync / periodischer Alarm-Trick)
 self.addEventListener('message', e => {
   if (e.data && e.data.type === 'CHECK_MHD') {
-    checkAndNotify(e.data.products);
+    checkAndNotify(e.data.products, e.data.warnDays || 2);
   }
 });
 
-function checkAndNotify(products) {
+function checkAndNotify(products, warnDays) {
+  warnDays = warnDays || 2;
   if (!products || !products.length) return;
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const soon = products.filter(p => {
     const mhd = new Date(p.mhd); mhd.setHours(0, 0, 0, 0);
     const days = Math.round((mhd - today) / 86400000);
-    return days >= 0 && days <= 2;
+    return days >= 0 && days <= warnDays;
   });
   const expired = products.filter(p => {
     const mhd = new Date(p.mhd); mhd.setHours(0, 0, 0, 0);
@@ -67,7 +68,7 @@ function checkAndNotify(products) {
   if (soon.length > 0 || expired.length > 0) {
     let body = '';
     if (expired.length) body += `⚠️ Abgelaufen: ${expired.map(p => p.name).join(', ')}. `;
-    if (soon.length) body += `🕐 Läuft bald ab: ${soon.map(p => p.name).join(', ')}.`;
+    if (soon.length) body += `🕐 In ≤${warnDays} Tag${warnDays===1?'':'en'}: ${soon.map(p => p.name).join(', ')}.`;
     self.registration.showNotification('🥛 Kühlschrank-Reminder', {
       body: body.trim(),
       icon: './icon-192.png',
