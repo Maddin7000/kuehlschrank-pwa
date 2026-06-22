@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kuehlschrank-v1';
+const CACHE_NAME = 'kuehlschrank-v2';
 const ASSETS = ['./', './index.html', './manifest.json'];
 
 self.addEventListener('install', e => {

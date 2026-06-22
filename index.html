@@ -11,9 +11,8 @@
 <link rel="manifest" href="./manifest.json">
 <title>Kühlschrank MHD</title>
 
-<!-- Barcode-Scanner Library (ZXing) -->
-<script src="https://unpkg.com/@zxing/browser@0.1.5/umd/index.min.js"></script>
-
+<!-- Quagga2 Barcode Scanner (Safari-kompatibel, kein schwarzer Screen) -->
+<script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.8.4/dist/quagga.min.js"></script>
 <style>
   :root {
     --blue:    #1A5FA8;
@@ -134,8 +133,7 @@
   .sheet-body { padding: 16px 16px 0; }
 
   /* ── Scanner ── */
-  .scan-box { position: relative; background: #000; border-radius: var(--radius); overflow: hidden; aspect-ratio: 1; margin-bottom: 14px; }
-  #video { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .scan-box { position: relative; background: #111; border-radius: var(--radius); overflow: hidden; aspect-ratio: 1; margin-bottom: 14px; }
   .scan-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
   .scan-frame { width: 65%; aspect-ratio: 1; border: 2.5px solid rgba(255,255,255,.85); border-radius: 16px; box-shadow: 0 0 0 2000px rgba(0,0,0,.45); }
   .scan-line { position: absolute; width: 60%; height: 2px; background: linear-gradient(to right, transparent, #fff, transparent); animation: scan 1.8s ease-in-out infinite; }
@@ -247,7 +245,7 @@
     <div class="sheet-body">
       <!-- Scanner -->
       <div class="scan-box" id="scan-box">
-        <video id="video" playsinline muted></video>
+        <video id="video" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover;display:block;"></video>
         <div class="scan-overlay">
           <div class="scan-frame"></div>
           <div class="scan-line"></div>
@@ -302,7 +300,6 @@
 let products = [];
 let filter = 'all';
 let selectedEmoji = '📦';
-let codeReader = null;
 let scanning = false;
 let editingId = null;
 
@@ -391,38 +388,119 @@ function setFilter(f, el) {
   render();
 }
 
-/* ─────────────── Scanner ─────────────── */
+/* ─────────────── Scanner (Safari-kompatibel) ─────────────── */
+let quaggaRunning = false;
+let nativeStream = null;
+
 async function startScanner() {
   const statusEl = document.getElementById('scan-status');
+  const video = document.getElementById('video');
+
+  // Erst Kamera-Stream direkt via getUserMedia starten (Safari braucht das explizit)
   try {
-    if (typeof ZXingBrowser === 'undefined') {
-      statusEl.textContent = 'Scanner-Bibliothek nicht geladen. Bitte Name manuell eingeben.';
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false
+    });
+    nativeStream = stream;
+    video.srcObject = stream;
+    video.setAttribute('playsinline', true);
+    await video.play();
+    statusEl.textContent = 'Barcode in den Rahmen halten …';
+    scanning = true;
+  } catch(e) {
+    statusEl.textContent = 'Kamera-Zugriff verweigert – bitte in Safari-Einstellungen erlauben.';
+    statusEl.className = 'scan-status error';
+    return;
+  }
+
+  // BarcodeDetector API (iOS 17+, Chrome) — schnellster Weg
+  if ('BarcodeDetector' in window) {
+    try {
+      const detector = new BarcodeDetector({ formats: ['ean_13','ean_8','upc_a','upc_e','code_128','code_39','qr_code'] });
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      let lastScan = 0;
+
+      async function nativeScanLoop() {
+        if (!scanning) return;
+        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+          const now = Date.now();
+          if (now - lastScan > 300) {
+            lastScan = now;
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0);
+            try {
+              const codes = await detector.detect(canvas);
+              if (codes.length > 0 && scanning) {
+                scanning = false;
+                onBarcodeFound(codes[0].rawValue);
+                return;
+              }
+            } catch(e) {}
+          }
+        }
+        requestAnimationFrame(nativeScanLoop);
+      }
+      requestAnimationFrame(nativeScanLoop);
+      return; // BarcodeDetector übernimmt
+    } catch(e) {}
+  }
+
+  // Fallback: Quagga2 (funktioniert in älteren Safari/iOS-Versionen)
+  if (typeof Quagga === 'undefined') {
+    statusEl.textContent = 'Scanner nicht geladen – bitte Namen manuell eingeben.';
+    statusEl.className = 'scan-status error';
+    return;
+  }
+
+  Quagga.init({
+    inputStream: {
+      name: 'Live',
+      type: 'LiveStream',
+      target: document.getElementById('video'),
+      constraints: { facingMode: 'environment', width: 1280, height: 720 }
+    },
+    decoder: {
+      readers: ['ean_reader','ean_8_reader','upc_reader','code_128_reader','code_39_reader']
+    },
+    locate: true,
+    numOfWorkers: 0,
+    frequency: 5
+  }, function(err) {
+    if (err) {
+      statusEl.textContent = 'Scanner-Fehler – bitte Namen manuell eingeben.';
       statusEl.className = 'scan-status error';
       return;
     }
-    const hints = new Map();
-    hints.set(ZXingBrowser.DecodeHintType?.TRY_HARDER, true);
-    codeReader = new ZXingBrowser.BrowserMultiFormatReader(hints);
-    const devices = await ZXingBrowser.BrowserMultiFormatReader.listVideoInputDevices();
-    if (!devices.length) { statusEl.textContent = 'Keine Kamera gefunden.'; statusEl.className='scan-status error'; return; }
-    const backCam = devices.find(d => /back|rear|environment/i.test(d.label)) || devices[devices.length - 1];
-    statusEl.textContent = 'Barcode in den Rahmen halten …';
-    scanning = true;
-    await codeReader.decodeFromVideoDevice(backCam.deviceId, 'video', (result, err) => {
-      if (result && scanning) {
-        scanning = false;
-        onBarcodeFound(result.getText());
-      }
-    });
-  } catch(e) {
-    statusEl.textContent = 'Kamera-Zugriff verweigert. Bitte manuell eingeben.';
-    statusEl.className = 'scan-status error';
-  }
+    quaggaRunning = true;
+    Quagga.start();
+  });
+
+  Quagga.onDetected(function(result) {
+    if (!scanning) return;
+    const code = result.codeResult.code;
+    if (!code) return;
+    scanning = false;
+    onBarcodeFound(code);
+  });
 }
 
 function stopScanner() {
   scanning = false;
-  if (codeReader) { try { codeReader.reset(); } catch(e) {} codeReader = null; }
+  // BarcodeDetector / native stream stoppen
+  if (nativeStream) {
+    nativeStream.getTracks().forEach(t => t.stop());
+    nativeStream = null;
+  }
+  const v = document.getElementById('video');
+  if (v) { v.srcObject = null; }
+  // Quagga stoppen
+  if (quaggaRunning) {
+    try { Quagga.stop(); } catch(e) {}
+    quaggaRunning = false;
+  }
 }
 
 function onBarcodeFound(barcode) {
