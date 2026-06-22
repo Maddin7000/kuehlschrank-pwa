@@ -7,187 +7,201 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Kühlschrank">
 <meta name="theme-color" content="#1A5FA8">
-<meta name="description" content="Produkte mit MHD verwalten – rechtzeitig erinnert werden.">
 <link rel="manifest" href="./manifest.json">
 <title>Kühlschrank MHD</title>
-
-<!-- Quagga2 Barcode Scanner (Safari-kompatibel, kein schwarzer Screen) -->
 <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.8.4/dist/quagga.min.js"></script>
 <style>
-  :root {
-    --blue:    #1A5FA8;
-    --blue-lt: #E8F1FB;
-    --blue-md: #2D7DD2;
-    --green:   #0F6E56;
-    --green-lt:#E1F5EE;
-    --amber:   #854F0B;
-    --amber-lt:#FAEEDA;
-    --red:     #A32D2D;
-    --red-lt:  #FCEBEB;
-    --bg:      #F2F6FB;
-    --surface: #FFFFFF;
-    --border:  rgba(26,95,168,.13);
-    --text:    #111827;
-    --muted:   #6B7280;
-    --radius:  14px;
-    --radius-sm: 9px;
-    font-size: 16px;
-  }
+:root{
+  --blue:#1A5FA8;--blue-lt:#E8F1FB;--blue-md:#2D7DD2;
+  --green:#0F6E56;--green-lt:#E1F5EE;
+  --amber:#854F0B;--amber-lt:#FAEEDA;
+  --red:#A32D2D;--red-lt:#FCEBEB;
+  --bg:#F2F6FB;--surface:#FFFFFF;
+  --border:rgba(26,95,168,.13);--text:#111827;--muted:#6B7280;
+  --radius:14px;--radius-sm:9px;
+}
+@media(prefers-color-scheme:dark){
+  :root{--bg:#0D1117;--surface:#161B22;--border:rgba(255,255,255,.10);--text:#E6EDF3;--muted:#8B949E;--blue-lt:#0D2340;--green-lt:#0A2E25;--amber-lt:#2B1A04;--red-lt:#2A0E0E;}
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow:hidden;font-family:-apple-system,'SF Pro Text','Helvetica Neue',sans-serif;background:var(--bg);color:var(--text);}
+#app{display:flex;flex-direction:column;height:100%;max-width:430px;margin:0 auto;}
 
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg:      #0D1117;
-      --surface: #161B22;
-      --border:  rgba(255,255,255,.10);
-      --text:    #E6EDF3;
-      --muted:   #8B949E;
-      --blue-lt: #0D2340;
-      --green-lt:#0A2E25;
-      --amber-lt:#2B1A04;
-      --red-lt:  #2A0E0E;
-    }
-  }
+/* topbar */
+.topbar{background:var(--surface);border-bottom:0.5px solid var(--border);padding:14px 16px 10px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;padding-top:max(env(safe-area-inset-top),14px);}
+.topbar-title{display:flex;align-items:center;gap:8px;}
+.topbar-title h1{font-size:17px;font-weight:600;letter-spacing:-.3px;}
+.logo{width:28px;height:28px;background:var(--blue);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;}
+.topbar-actions{display:flex;gap:4px;}
+.icon-btn{background:none;border:none;cursor:pointer;padding:7px;border-radius:10px;color:var(--muted);display:flex;align-items:center;transition:background .15s;}
+.icon-btn:active{background:var(--bg);}
+.icon-btn svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
 
-  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-  html, body { height: 100%; overflow: hidden; font-family: -apple-system, 'SF Pro Text', 'Helvetica Neue', sans-serif; background: var(--bg); color: var(--text); }
+/* nav tabs (bottom) */
+.nav{display:flex;background:var(--surface);border-top:0.5px solid var(--border);flex-shrink:0;padding-bottom:max(env(safe-area-inset-bottom),4px);}
+.nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px 6px;border:none;background:none;cursor:pointer;color:var(--muted);font-size:10px;font-weight:500;transition:color .15s;}
+.nav-btn svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+.nav-btn.active{color:var(--blue);}
 
-  /* ── Layout ── */
-  #app { display: flex; flex-direction: column; height: 100%; max-width: 430px; margin: 0 auto; position: relative; }
-  .topbar { background: var(--surface); border-bottom: 0.5px solid var(--border); padding: env(safe-area-inset-top, 14px) 16px 12px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; padding-top: max(env(safe-area-inset-top), 14px); }
-  .topbar-title { display: flex; align-items: center; gap: 8px; }
-  .topbar-title h1 { font-size: 17px; font-weight: 600; letter-spacing: -.3px; }
-  .topbar-title .logo { width: 28px; height: 28px; background: var(--blue); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
-  .topbar-actions { display: flex; gap: 4px; }
-  .icon-btn { background: none; border: none; cursor: pointer; padding: 7px; border-radius: 10px; color: var(--muted); font-size: 20px; display: flex; align-items: center; transition: background .15s; }
-  .icon-btn:active { background: var(--bg); }
-  .icon-btn svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+/* scroll */
+.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:8px;}
+.view{display:none;}.view.active{display:block;}
 
-  /* ── Scroll area ── */
-  .scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: 100px; }
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:14px 14px 6px;}
+.stat{background:var(--surface);border-radius:var(--radius-sm);padding:11px 8px;text-align:center;border:0.5px solid var(--border);}
+.stat-num{font-size:26px;font-weight:700;line-height:1;}
+.stat-lbl{font-size:10px;font-weight:500;color:var(--muted);margin-top:3px;letter-spacing:.04em;text-transform:uppercase;}
+.s-ok .stat-num{color:var(--green);}.s-warn .stat-num{color:var(--amber);}.s-exp .stat-num{color:var(--red);}
 
-  /* ── Stats ── */
-  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 14px 14px 6px; }
-  .stat { background: var(--surface); border-radius: var(--radius-sm); padding: 11px 8px; text-align: center; border: 0.5px solid var(--border); }
-  .stat-num { font-size: 26px; font-weight: 700; line-height: 1; }
-  .stat-lbl { font-size: 10px; font-weight: 500; color: var(--muted); margin-top: 3px; letter-spacing: .04em; text-transform: uppercase; }
-  .s-ok   .stat-num { color: var(--green); }
-  .s-warn .stat-num { color: var(--amber); }
-  .s-exp  .stat-num { color: var(--red); }
+/* filter tabs */
+.tabs{display:flex;gap:6px;padding:8px 14px 4px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.tabs::-webkit-scrollbar{display:none;}
+.tab{background:var(--surface);border:0.5px solid var(--border);border-radius:20px;padding:5px 13px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;white-space:nowrap;transition:all .15s;flex-shrink:0;}
+.tab.active{background:var(--blue);border-color:var(--blue);color:#fff;}
 
-  /* ── Filter tabs ── */
-  .tabs { display: flex; gap: 6px; padding: 8px 14px 4px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-  .tabs::-webkit-scrollbar { display: none; }
-  .tab { background: var(--surface); border: 0.5px solid var(--border); border-radius: 20px; padding: 5px 13px; font-size: 13px; font-weight: 500; color: var(--muted); cursor: pointer; white-space: nowrap; transition: all .15s; flex-shrink: 0; }
-  .tab.active { background: var(--blue); border-color: var(--blue); color: #fff; }
+/* sort bar */
+.sort-bar{display:flex;align-items:center;gap:6px;padding:6px 14px 2px;}
+.sort-lbl{font-size:12px;color:var(--muted);white-space:nowrap;}
+.sort-select{background:var(--surface);border:0.5px solid var(--border);border-radius:20px;padding:4px 10px;font-size:12px;font-weight:500;color:var(--text);cursor:pointer;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;padding-right:24px;}
 
-  /* ── Section header ── */
-  .section-hd { font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; padding: 12px 14px 5px; }
+/* search */
+.search-wrap{padding:6px 14px 2px;}
+.search-wrap input{width:100%;background:var(--surface);border:0.5px solid var(--border);border-radius:11px;padding:9px 14px;font-size:14px;color:var(--text);}
+.search-wrap input::placeholder{color:var(--muted);}
+.search-wrap input:focus{outline:none;border-color:var(--blue-md);}
 
-  /* ── Product cards ── */
-  .list { padding: 0 14px; display: flex; flex-direction: column; gap: 9px; }
-  .card { background: var(--surface); border-radius: var(--radius); border: 0.5px solid var(--border); padding: 13px 14px; user-select: none; }
-  .card-top { display: flex; align-items: center; gap: 11px; }
-  .card-emoji { width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
-  .card-emoji.ok   { background: var(--green-lt); }
-  .card-emoji.warn { background: var(--amber-lt); }
-  .card-emoji.exp  { background: var(--red-lt); }
-  .card-body { flex: 1; min-width: 0; }
-  .card-name { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .card-sub  { font-size: 12px; color: var(--muted); margin-top: 2px; }
-  .badge { font-size: 11px; font-weight: 600; padding: 4px 9px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; }
-  .badge.ok   { background: var(--green-lt); color: var(--green); }
-  .badge.warn { background: var(--amber-lt); color: var(--amber); }
-  .badge.exp  { background: var(--red-lt);   color: var(--red); }
-  .bar { height: 3px; border-radius: 3px; background: var(--bg); margin-top: 11px; overflow: hidden; }
-  .bar-fill { height: 100%; border-radius: 3px; transition: width .4s ease; }
-  .bar-fill.ok   { background: #1D9E75; }
-  .bar-fill.warn { background: #EF9F27; }
-  .bar-fill.exp  { background: #E24B4A; }
-  .del-btn { background: none; border: none; cursor: pointer; padding: 6px; color: var(--muted); border-radius: 8px; display: flex; align-items: center; flex-shrink: 0; }
-  .del-btn:active { background: var(--red-lt); color: var(--red); }
-  .del-btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+/* section hd */
+.section-hd{font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;padding:10px 14px 5px;}
 
-  /* ── Empty state ── */
-  .empty { text-align: center; padding: 60px 24px 0; }
-  .empty-icon { font-size: 64px; margin-bottom: 16px; }
-  .empty-title { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
-  .empty-sub { font-size: 14px; color: var(--muted); line-height: 1.6; }
+/* product cards */
+.list{padding:0 14px;display:flex;flex-direction:column;gap:9px;padding-bottom:12px;}
+.card{background:var(--surface);border-radius:var(--radius);border:0.5px solid var(--border);padding:13px 14px;user-select:none;}
+.card-top{display:flex;align-items:center;gap:11px;}
+.card-emoji{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
+.card-emoji.ok{background:var(--green-lt);}.card-emoji.warn{background:var(--amber-lt);}.card-emoji.exp{background:var(--red-lt);}
+.card-body{flex:1;min-width:0;}
+.card-name{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.card-sub{font-size:12px;color:var(--muted);margin-top:2px;}
+.badge{font-size:11px;font-weight:600;padding:4px 9px;border-radius:20px;white-space:nowrap;flex-shrink:0;}
+.badge.ok{background:var(--green-lt);color:var(--green);}.badge.warn{background:var(--amber-lt);color:var(--amber);}.badge.exp{background:var(--red-lt);color:var(--red);}
+.bar{height:3px;border-radius:3px;background:var(--bg);margin-top:10px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:3px;transition:width .4s ease;}
+.bar-fill.ok{background:#1D9E75;}.bar-fill.warn{background:#EF9F27;}.bar-fill.exp{background:#E24B4A;}
 
-  /* ── FAB ── */
-  .fab-wrap { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; padding: 12px 14px max(env(safe-area-inset-bottom), 16px); background: linear-gradient(to top, var(--bg) 70%, transparent); pointer-events: none; }
-  .fab { width: 100%; background: var(--blue); color: #fff; border: none; border-radius: var(--radius); padding: 15px; font-size: 15px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; pointer-events: all; transition: background .15s, transform .1s; }
-  .fab:active { background: #154d8a; transform: scale(0.98); }
-  .fab svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+/* qty row */
+.qty-row{display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:0.5px solid var(--border);}
+.qty-lbl{font-size:12px;color:var(--muted);flex:1;}
+.qty-val{font-size:14px;font-weight:600;min-width:36px;text-align:center;}
+.qty-btn{width:30px;height:30px;border-radius:50%;border:0.5px solid var(--border);background:var(--bg);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;color:var(--text);flex-shrink:0;font-weight:300;}
+.qty-btn:active{background:var(--blue-lt);}
+.qty-empty{color:var(--red);font-weight:600;}
 
-  /* ── Toast ── */
-  .toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%) translateY(20px); background: #111; color: #fff; padding: 10px 18px; border-radius: 30px; font-size: 13px; font-weight: 500; opacity: 0; transition: all .25s; z-index: 200; white-space: nowrap; pointer-events: none; }
-  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+/* del btn */
+.del-btn{background:none;border:none;cursor:pointer;padding:6px;color:var(--muted);border-radius:8px;display:flex;align-items:center;flex-shrink:0;}
+.del-btn:active{background:var(--red-lt);color:var(--red);}
+.del-btn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
 
-  /* ── Bottom Sheet / Modal ── */
-  .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 100; align-items: flex-end; justify-content: center; backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); }
-  .overlay.open { display: flex; }
-  .sheet { background: var(--surface); border-radius: 20px 20px 0 0; padding: 0 0 max(env(safe-area-inset-bottom), 24px); width: 100%; max-width: 430px; max-height: 92vh; overflow-y: auto; animation: slideUp .28s ease; }
-  @keyframes slideUp { from { transform: translateY(30px); opacity: .6; } to { transform: translateY(0); opacity: 1; } }
-  .sheet-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 10px auto 0; }
-  .sheet-title { font-size: 17px; font-weight: 700; padding: 14px 16px 0; display: flex; align-items: center; justify-content: space-between; }
-  .sheet-body { padding: 16px 16px 0; }
+/* empty */
+.empty{text-align:center;padding:60px 24px 0;}
+.empty-icon{font-size:64px;margin-bottom:16px;}
+.empty-title{font-size:18px;font-weight:600;margin-bottom:8px;}
+.empty-sub{font-size:14px;color:var(--muted);line-height:1.6;}
 
-  /* ── Scanner ── */
-  .scan-box { position: relative; background: #111; border-radius: var(--radius); overflow: hidden; aspect-ratio: 1; margin-bottom: 14px; }
-  .scan-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
-  .scan-frame { width: 65%; aspect-ratio: 1; border: 2.5px solid rgba(255,255,255,.85); border-radius: 16px; box-shadow: 0 0 0 2000px rgba(0,0,0,.45); }
-  .scan-line { position: absolute; width: 60%; height: 2px; background: linear-gradient(to right, transparent, #fff, transparent); animation: scan 1.8s ease-in-out infinite; }
-  @keyframes scan { 0%,100% { top: 20%; } 50% { top: 75%; } }
-  .scan-hint { position: absolute; bottom: 14px; left: 0; right: 0; text-align: center; color: rgba(255,255,255,.8); font-size: 13px; font-weight: 500; }
-  .scan-status { text-align: center; font-size: 14px; color: var(--muted); padding: 10px 0 14px; min-height: 40px; }
-  .scan-status.success { color: var(--green); font-weight: 600; }
-  .scan-status.error   { color: var(--red); }
+/* FAB */
+.fab-wrap{padding:10px 14px max(env(safe-area-inset-bottom,0px),0px);background:var(--bg);border-top:0.5px solid var(--border);}
+.fab{width:100%;background:var(--blue);color:#fff;border:none;border-radius:var(--radius);padding:14px;font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:background .15s,transform .1s;}
+.fab:active{background:#154d8a;transform:scale(.98);}
+.fab svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
 
-  /* ── Form fields ── */
-  .field { margin-bottom: 14px; }
-  .field label { font-size: 13px; font-weight: 600; color: var(--muted); display: block; margin-bottom: 6px; }
-  .field input, .field select { width: 100%; background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 11px 13px; font-size: 15px; color: var(--text); -webkit-appearance: none; }
-  .field input:focus, .field select:focus { outline: none; border-color: var(--blue-md); box-shadow: 0 0 0 3px rgba(45,125,210,.18); }
-  .emoji-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-bottom: 14px; }
-  .emoji-opt { background: var(--bg); border: 1.5px solid transparent; border-radius: 10px; padding: 8px; font-size: 22px; text-align: center; cursor: pointer; transition: all .15s; }
-  .emoji-opt.selected { border-color: var(--blue-md); background: var(--blue-lt); }
-  .btn-row { display: grid; grid-template-columns: 1fr 2fr; gap: 10px; padding-top: 4px; }
-  .btn-cancel { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 13px; font-size: 15px; font-weight: 600; cursor: pointer; color: var(--muted); }
-  .btn-save   { background: var(--blue); border: none; border-radius: var(--radius-sm); padding: 13px; font-size: 15px; font-weight: 600; cursor: pointer; color: #fff; }
-  .btn-save:active { background: #154d8a; }
+/* toast */
+.toast{position:fixed;bottom:140px;left:50%;transform:translateX(-50%) translateY(20px);background:#111;color:#fff;padding:10px 18px;border-radius:30px;font-size:13px;font-weight:500;opacity:0;transition:all .25s;z-index:500;white-space:nowrap;pointer-events:none;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
-  /* ── Notif permission banner ── */
-  .notif-bar { background: var(--amber-lt); border-bottom: 0.5px solid rgba(133,79,11,.2); padding: 10px 14px; display: flex; align-items: center; gap: 10px; cursor: pointer; flex-shrink: 0; }
-  .notif-bar p { font-size: 13px; color: var(--amber); font-weight: 500; flex: 1; }
-  .notif-bar span { font-size: 12px; font-weight: 700; color: var(--blue); white-space: nowrap; }
-  .notif-bar svg { width: 18px; height: 18px; stroke: var(--amber); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+/* notif bar */
+.notif-bar{background:var(--amber-lt);border-bottom:0.5px solid rgba(133,79,11,.2);padding:10px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;flex-shrink:0;}
+.notif-bar p{font-size:13px;color:var(--amber);font-weight:500;flex:1;}
+.notif-bar span{font-size:12px;font-weight:700;color:var(--blue);white-space:nowrap;}
+.notif-bar svg{width:18px;height:18px;stroke:var(--amber);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}
 
-  /* ── Settings sheet ── */
-  .settings-section {}
-  .settings-label { font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px; }
-  .settings-card { background:var(--bg);border-radius:var(--radius-sm);padding:14px; }
-  .settings-row { display:flex;align-items:flex-start;gap:12px; }
-  .settings-row-title { font-size:15px;font-weight:500;color:var(--text); }
-  .settings-row-sub { font-size:12px;color:var(--muted);margin-top:2px;line-height:1.5; }
+/* ── WOCHENKALENDER ── */
+.cal-header{display:flex;align-items:center;justify-content:space-between;padding:14px 14px 0;}
+.cal-header h2{font-size:16px;font-weight:600;}
+.cal-nav{display:flex;gap:4px;}
+.cal-nav button{background:none;border:0.5px solid var(--border);border-radius:8px;padding:5px 10px;cursor:pointer;color:var(--text);font-size:13px;}
+.cal-nav button:active{background:var(--bg);}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;padding:12px 14px 0;}
+.cal-day-hd{text-align:center;font-size:10px;font-weight:600;color:var(--muted);padding-bottom:4px;text-transform:uppercase;}
+.cal-cell{background:var(--surface);border-radius:10px;border:0.5px solid var(--border);min-height:54px;padding:5px 4px;cursor:pointer;transition:border-color .15s;}
+.cal-cell:active{border-color:var(--blue-md);}
+.cal-cell.today{border-color:var(--blue-md);border-width:1.5px;}
+.cal-cell.other-month .cal-date{color:var(--border);}
+.cal-date{font-size:12px;font-weight:600;text-align:center;margin-bottom:3px;}
+.cal-dots{display:flex;flex-wrap:wrap;gap:2px;justify-content:center;}
+.cal-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+.cal-dot.ok{background:#1D9E75;}.cal-dot.warn{background:#EF9F27;}.cal-dot.exp{background:#E24B4A;}
+.cal-legend{display:flex;gap:12px;padding:10px 14px 4px;flex-wrap:wrap;}
+.cal-legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);}
+.cal-legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.cal-detail{margin:10px 14px 0;background:var(--surface);border-radius:var(--radius);border:0.5px solid var(--border);padding:14px;}
+.cal-detail-title{font-size:13px;font-weight:600;color:var(--muted);margin-bottom:10px;}
+.cal-detail-item{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:0.5px solid var(--border);}
+.cal-detail-item:last-child{border-bottom:none;padding-bottom:0;}
+.cal-detail-emoji{font-size:20px;width:28px;text-align:center;}
+.cal-detail-name{font-size:14px;font-weight:500;flex:1;}
+.cal-detail-badge{font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px;}
 
+/* ── OVERLAYS ── */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;align-items:flex-end;justify-content:center;backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);}
+.overlay.open{display:flex;}
+.sheet{background:var(--surface);border-radius:20px 20px 0 0;padding:0 0 max(env(safe-area-inset-bottom),24px);width:100%;max-width:430px;max-height:92vh;overflow-y:auto;animation:slideUp .28s ease;}
+@keyframes slideUp{from{transform:translateY(30px);opacity:.6;}to{transform:translateY(0);opacity:1;}}
+.sheet-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:10px auto 0;}
+.sheet-title{font-size:17px;font-weight:700;padding:14px 16px 0;display:flex;align-items:center;justify-content:space-between;}
+.sheet-body{padding:16px 16px 0;}
 
-  .search-wrap { padding: 8px 14px 4px; }
-  .search-wrap input { width: 100%; background: var(--surface); border: 0.5px solid var(--border); border-radius: 11px; padding: 9px 14px; font-size: 14px; color: var(--text); }
-  .search-wrap input::placeholder { color: var(--muted); }
-  .search-wrap input:focus { outline: none; border-color: var(--blue-md); }
+/* scanner */
+.scan-box{position:relative;background:#111;border-radius:var(--radius);overflow:hidden;aspect-ratio:1;margin-bottom:14px;}
+.scan-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;}
+.scan-frame{width:65%;aspect-ratio:1;border:2.5px solid rgba(255,255,255,.85);border-radius:16px;box-shadow:0 0 0 2000px rgba(0,0,0,.45);}
+.scan-line{position:absolute;width:60%;height:2px;background:linear-gradient(to right,transparent,#fff,transparent);animation:scanln 1.8s ease-in-out infinite;}
+@keyframes scanln{0%,100%{top:20%;}50%{top:75%;}}
+.scan-hint{position:absolute;bottom:14px;left:0;right:0;text-align:center;color:rgba(255,255,255,.8);font-size:13px;font-weight:500;}
+.scan-status{text-align:center;font-size:14px;color:var(--muted);padding:10px 0 14px;min-height:40px;}
+.scan-status.success{color:var(--green);font-weight:600;}.scan-status.error{color:var(--red);}
+
+/* form fields */
+.field{margin-bottom:14px;}
+.field label{font-size:13px;font-weight:600;color:var(--muted);display:block;margin-bottom:6px;}
+.field input,.field select{width:100%;background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:11px 13px;font-size:15px;color:var(--text);-webkit-appearance:none;}
+.field input:focus,.field select:focus{outline:none;border-color:var(--blue-md);box-shadow:0 0 0 3px rgba(45,125,210,.18);}
+.qty-field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.emoji-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:14px;}
+.emoji-opt{background:var(--bg);border:1.5px solid transparent;border-radius:10px;padding:8px;font-size:22px;text-align:center;cursor:pointer;transition:all .15s;}
+.emoji-opt.selected{border-color:var(--blue-md);background:var(--blue-lt);}
+.btn-row{display:grid;grid-template-columns:1fr 2fr;gap:10px;padding-top:4px;}
+.btn-cancel{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:13px;font-size:15px;font-weight:600;cursor:pointer;color:var(--muted);}
+.btn-save{background:var(--blue);border:none;border-radius:var(--radius-sm);padding:13px;font-size:15px;font-weight:600;cursor:pointer;color:#fff;}
+.btn-save:active{background:#154d8a;}
+
+/* settings */
+.settings-label{font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px;}
+.settings-card{background:var(--bg);border-radius:var(--radius-sm);padding:14px;}
+.settings-row{display:flex;align-items:flex-start;gap:12px;}
+.settings-row-title{font-size:15px;font-weight:500;color:var(--text);}
+.settings-row-sub{font-size:12px;color:var(--muted);margin-top:2px;line-height:1.5;}
 </style>
 </head>
 <body>
-
 <div id="app">
-  <!-- Top bar -->
+
   <div class="topbar">
     <div class="topbar-title">
       <div class="logo">🥛</div>
       <h1>Kühlschrank</h1>
     </div>
     <div class="topbar-actions">
-      <button class="icon-btn" id="notif-toggle-btn" onclick="requestNotifications()" title="Benachrichtigungen aktivieren">
+      <button class="icon-btn" onclick="requestNotifications()" title="Benachrichtigungen">
         <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
       </button>
       <button class="icon-btn" onclick="openSettings()" title="Einstellungen">
@@ -196,142 +210,138 @@
     </div>
   </div>
 
-  <!-- Notification permission banner -->
   <div class="notif-bar" id="notif-bar" onclick="requestNotifications()" style="display:none">
     <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-    <p>Aktiviere Benachrichtigungen für MHD-Erinnerungen</p>
+    <p>Benachrichtigungen für MHD-Erinnerungen aktivieren</p>
     <span>Aktivieren →</span>
   </div>
 
-  <div class="scroll">
-    <!-- Stats -->
-    <div class="stats">
-      <div class="stat s-ok"><div class="stat-num" id="cnt-ok">0</div><div class="stat-lbl">Frisch</div></div>
-      <div class="stat s-warn"><div class="stat-num" id="cnt-warn">0</div><div class="stat-lbl">Bald ab</div></div>
-      <div class="stat s-exp"><div class="stat-num" id="cnt-exp">0</div><div class="stat-lbl">Abgelaufen</div></div>
+  <div class="scroll" id="main-scroll">
+
+    <!-- ══ VIEW: LISTE ══ -->
+    <div class="view active" id="view-list">
+      <div class="stats">
+        <div class="stat s-ok"><div class="stat-num" id="cnt-ok">0</div><div class="stat-lbl">Frisch</div></div>
+        <div class="stat s-warn"><div class="stat-num" id="cnt-warn">0</div><div class="stat-lbl">Bald ab</div></div>
+        <div class="stat s-exp"><div class="stat-num" id="cnt-exp">0</div><div class="stat-lbl">Abgelaufen</div></div>
+      </div>
+
+      <div class="tabs">
+        <div class="tab active" onclick="setFilter('all',this)">Alle</div>
+        <div class="tab" onclick="setFilter('exp',this)">⚠️ Abgelaufen</div>
+        <div class="tab" onclick="setFilter('warn',this)">🕐 Bald</div>
+        <div class="tab" onclick="setFilter('ok',this)">✅ Frisch</div>
+      </div>
+
+      <div class="sort-bar">
+        <span class="sort-lbl">Sortierung:</span>
+        <select class="sort-select" id="sort-select" onchange="render()">
+          <option value="mhd">MHD (nächstes zuerst)</option>
+          <option value="name">Name (A–Z)</option>
+          <option value="kat">Kategorie</option>
+          <option value="added">Hinzugefügt (neuestes)</option>
+        </select>
+      </div>
+
+      <div class="search-wrap">
+        <input type="search" id="search" placeholder="🔍  Produkt suchen…" oninput="render()" autocomplete="off">
+      </div>
+
+      <div class="section-hd" id="list-label">Produkte</div>
+      <div class="list" id="product-list"></div>
     </div>
 
-    <!-- Filter tabs -->
-    <div class="tabs">
-      <div class="tab active" data-filter="all" onclick="setFilter('all',this)">Alle</div>
-      <div class="tab" data-filter="exp" onclick="setFilter('exp',this)">⚠️ Abgelaufen</div>
-      <div class="tab" data-filter="warn" onclick="setFilter('warn',this)">🕐 Bald ablaufend</div>
-      <div class="tab" data-filter="ok" onclick="setFilter('ok',this)">✅ Frisch</div>
+    <!-- ══ VIEW: KALENDER ══ -->
+    <div class="view" id="view-cal">
+      <div class="cal-header">
+        <h2 id="cal-month-lbl"></h2>
+        <div class="cal-nav">
+          <button onclick="calShift(-1)">‹</button>
+          <button onclick="calShift(0)">Heute</button>
+          <button onclick="calShift(1)">›</button>
+        </div>
+      </div>
+      <div class="cal-legend">
+        <div class="cal-legend-item"><div class="cal-legend-dot ok"></div>Frisch</div>
+        <div class="cal-legend-item"><div class="cal-legend-dot warn"></div>Bald ablaufend</div>
+        <div class="cal-legend-item"><div class="cal-legend-dot exp"></div>Abgelaufen</div>
+      </div>
+      <div class="cal-grid" id="cal-grid"></div>
+      <div id="cal-detail"></div>
     </div>
 
-    <!-- Search -->
-    <div class="search-wrap">
-      <input type="search" id="search" placeholder="🔍  Produkt suchen…" oninput="render()" autocomplete="off">
-    </div>
-
-    <div class="section-hd" id="list-label">Produkte</div>
-    <div class="list" id="product-list"></div>
   </div>
 
-  <!-- FAB -->
-  <div class="fab-wrap">
-    <button class="fab" onclick="openAdd()">
-      <svg viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
-      Produkt scannen / hinzufügen
+  <!-- Bottom nav -->
+  <div class="nav">
+    <button class="nav-btn active" id="nav-list" onclick="switchView('list')">
+      <svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      Liste
+    </button>
+    <button class="nav-btn" id="nav-cal" onclick="switchView('cal')">
+      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      Kalender
+    </button>
+    <button class="nav-btn" id="nav-add" onclick="openAdd()" style="color:var(--blue);">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      Hinzufügen
     </button>
   </div>
 
-  <!-- Toast -->
   <div class="toast" id="toast"></div>
 </div>
 
-<!-- ════════════════ SETTINGS MODAL ════════════════ -->
-<div class="overlay" id="settings-overlay" onclick="settingsOverlayClick(event)">
-  <div class="sheet" id="settings-sheet">
+<!-- ════ SETTINGS OVERLAY ════ -->
+<div class="overlay" id="settings-overlay" onclick="if(event.target===this)closeSettings()">
+  <div class="sheet">
     <div class="sheet-handle"></div>
     <div class="sheet-title">
       <span>Einstellungen</span>
-      <button class="icon-btn" onclick="closeSettings()">
-        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
+      <button class="icon-btn" onclick="closeSettings()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
     <div class="sheet-body">
-
-      <!-- Vorwarnzeit -->
-      <div class="settings-section">
-        <div class="settings-label">🔔 Benachrichtigungen</div>
-        <div class="settings-card">
-          <div class="settings-row">
-            <div>
-              <div class="settings-row-title">Vorwarnzeit</div>
-              <div class="settings-row-sub">Erinnerung <span id="days-display" style="font-weight:600;color:var(--blue)">2 Tage</span> vor Ablauf</div>
-            </div>
-          </div>
-          <div style="margin-top:14px;">
-            <input type="range" id="warn-days-slider" min="1" max="14" value="2" step="1"
-              oninput="updateDaysPreview(this.value)" onchange="saveDaysSetting(this.value)"
-              style="width:100%;">
-            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:4px;">
-              <span>1 Tag</span>
-              <span>3</span>
-              <span>5</span>
-              <span>7</span>
-              <span>10</span>
-              <span>14 Tage</span>
-            </div>
-          </div>
-          <div id="warn-preview" style="margin-top:12px;padding:10px 12px;background:var(--amber-lt);border-radius:var(--radius-sm);font-size:13px;color:var(--amber);"></div>
-        </div>
-
-        <div class="settings-card" style="margin-top:10px;">
-          <div class="settings-row" style="justify-content:space-between;">
-            <div>
-              <div class="settings-row-title">Push-Benachrichtigungen</div>
-              <div class="settings-row-sub" id="notif-status-text">Status wird geladen…</div>
-            </div>
-            <button id="notif-toggle" onclick="toggleNotifFromSettings()" style="background:var(--blue);border:none;border-radius:20px;color:#fff;font-size:13px;font-weight:600;padding:7px 14px;cursor:pointer;white-space:nowrap;flex-shrink:0;"></button>
-          </div>
+      <div class="settings-label">🔔 Benachrichtigungen</div>
+      <div class="settings-card">
+        <div class="settings-row-title">Vorwarnzeit</div>
+        <div class="settings-row-sub" style="margin-bottom:12px;">Erinnerung <span id="days-display" style="font-weight:600;color:var(--blue)">2 Tage</span> vor Ablauf</div>
+        <input type="range" id="warn-days-slider" min="1" max="14" value="2" step="1" oninput="updateDaysPreview(this.value)" onchange="saveDaysSetting(this.value)" style="width:100%;">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:4px;"><span>1 Tag</span><span>3</span><span>5</span><span>7</span><span>10</span><span>14 Tage</span></div>
+        <div id="warn-preview" style="margin-top:12px;padding:10px 12px;background:var(--amber-lt);border-radius:var(--radius-sm);font-size:13px;color:var(--amber);"></div>
+      </div>
+      <div class="settings-card" style="margin-top:10px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+          <div><div class="settings-row-title">Push-Benachrichtigungen</div><div class="settings-row-sub" id="notif-status-text"></div></div>
+          <button id="notif-toggle" onclick="toggleNotifFromSettings()" style="background:var(--blue);border:none;border-radius:20px;color:#fff;font-size:13px;font-weight:600;padding:7px 14px;cursor:pointer;white-space:nowrap;flex-shrink:0;"></button>
         </div>
       </div>
 
-      <!-- Produkte -->
-      <div class="settings-section" style="margin-top:20px;">
-        <div class="settings-label">📦 Produkte</div>
-        <div class="settings-card">
-          <div class="settings-row" style="justify-content:space-between;align-items:center;">
-            <div>
-              <div class="settings-row-title">Abgelaufene löschen</div>
-              <div class="settings-row-sub">Alle Produkte mit überschrittenem MHD entfernen</div>
-            </div>
-            <button onclick="deleteExpiredFromSettings()" style="background:var(--red-lt);border:none;border-radius:var(--radius-sm);color:var(--red);font-size:13px;font-weight:600;padding:8px 14px;cursor:pointer;white-space:nowrap;flex-shrink:0;">Löschen</button>
-          </div>
-        </div>
-        <div class="settings-card" style="margin-top:10px;">
-          <div class="settings-row" style="justify-content:space-between;align-items:center;">
-            <div>
-              <div class="settings-row-title">Alle Daten löschen</div>
-              <div class="settings-row-sub">Gesamten Kühlschrankinhalt zurücksetzen</div>
-            </div>
-            <button onclick="deleteAllFromSettings()" style="background:var(--red-lt);border:none;border-radius:var(--radius-sm);color:var(--red);font-size:13px;font-weight:600;padding:8px 14px;cursor:pointer;white-space:nowrap;flex-shrink:0;">Zurücksetzen</button>
-          </div>
+      <div class="settings-label" style="margin-top:20px;">📦 Produkte</div>
+      <div class="settings-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+          <div><div class="settings-row-title">Abgelaufene löschen</div><div class="settings-row-sub">Alle Produkte mit überschrittenem MHD</div></div>
+          <button onclick="deleteExpiredFromSettings()" style="background:var(--red-lt);border:none;border-radius:var(--radius-sm);color:var(--red);font-size:13px;font-weight:600;padding:8px 14px;cursor:pointer;white-space:nowrap;">Löschen</button>
         </div>
       </div>
-
-      <!-- Info -->
-      <div style="margin-top:20px;padding:0 2px 8px;font-size:12px;color:var(--muted);text-align:center;line-height:1.8;">
-        Kühlschrank MHD · PWA v1.1<br>Daten werden lokal auf deinem Gerät gespeichert.
+      <div class="settings-card" style="margin-top:10px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+          <div><div class="settings-row-title">Alle Daten löschen</div><div class="settings-row-sub">Gesamten Kühlschrankinhalt zurücksetzen</div></div>
+          <button onclick="deleteAllFromSettings()" style="background:var(--red-lt);border:none;border-radius:var(--radius-sm);color:var(--red);font-size:13px;font-weight:600;padding:8px 14px;cursor:pointer;white-space:nowrap;">Reset</button>
+        </div>
       </div>
+      <div style="margin-top:20px;padding-bottom:8px;font-size:12px;color:var(--muted);text-align:center;line-height:1.8;">Kühlschrank MHD · PWA v1.2<br>Daten werden lokal auf deinem Gerät gespeichert.</div>
     </div>
   </div>
 </div>
 
-<!-- ════════════════ ADD PRODUCT MODAL ════════════════ -->
-<div class="overlay" id="overlay" onclick="overlayClick(event)">
-  <div class="sheet" id="sheet">
+<!-- ════ ADD/EDIT OVERLAY ════ -->
+<div class="overlay" id="overlay" onclick="if(event.target===this)closeAdd()">
+  <div class="sheet">
     <div class="sheet-handle"></div>
     <div class="sheet-title">
       <span id="sheet-heading">Produkt hinzufügen</span>
-      <button class="icon-btn" onclick="closeAdd()">
-        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
+      <button class="icon-btn" onclick="closeAdd()"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
     <div class="sheet-body">
-      <!-- Scanner -->
       <div class="scan-box" id="scan-box">
         <video id="video" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover;display:block;"></video>
         <div class="scan-overlay">
@@ -342,23 +352,15 @@
       </div>
       <div class="scan-status" id="scan-status">Kamera wird gestartet…</div>
 
-      <!-- Emoji picker -->
-      <div class="field">
-        <label>Symbol</label>
+      <div class="field"><label>Symbol</label>
         <div class="emoji-grid" id="emoji-grid"></div>
       </div>
-
-      <!-- Felder -->
-      <div class="field">
-        <label>Produktname *</label>
-        <input id="inp-name" type="text" placeholder="z.B. Vollmilch 3,5%" autocomplete="off">
+      <div class="field"><label>Produktname *</label><input id="inp-name" type="text" placeholder="z.B. Vollmilch 3,5%" autocomplete="off"></div>
+      <div class="qty-field-row">
+        <div class="field"><label>Anfangsmenge</label><input id="inp-qty-total" type="number" min="1" placeholder="z.B. 6" autocomplete="off"></div>
+        <div class="field"><label>Einheit</label><input id="inp-unit" type="text" placeholder="z.B. Stück, ml, g" autocomplete="off"></div>
       </div>
-      <div class="field">
-        <label>Menge / Einheit</label>
-        <input id="inp-menge" type="text" placeholder="z.B. 1 Liter, 500g …" autocomplete="off">
-      </div>
-      <div class="field">
-        <label>Kategorie</label>
+      <div class="field"><label>Kategorie</label>
         <select id="inp-kat">
           <option value="">— keine —</option>
           <option value="Milchprodukte">🥛 Milchprodukte</option>
@@ -370,11 +372,7 @@
           <option value="Sonstiges">📦 Sonstiges</option>
         </select>
       </div>
-      <div class="field">
-        <label>Mindesthaltbarkeitsdatum (MHD) *</label>
-        <input id="inp-mhd" type="date">
-      </div>
-
+      <div class="field"><label>Mindesthaltbarkeitsdatum (MHD) *</label><input id="inp-mhd" type="date"></div>
       <div class="btn-row">
         <button class="btn-cancel" onclick="closeAdd()">Abbrechen</button>
         <button class="btn-save" onclick="saveProduct()">💾  Speichern</button>
@@ -384,80 +382,111 @@
 </div>
 
 <script>
-/* ─────────────── State ─────────────── */
+/* ══ STATE ══ */
 let products = [];
 let filter = 'all';
+let sortMode = 'mhd';
 let selectedEmoji = '📦';
 let scanning = false;
 let editingId = null;
+let warnDays = 2;
+let calOffset = 0;   // Monats-Offset vom aktuellen Monat
+let calSelectedDate = null;
+
+let quaggaRunning = false;
+let nativeStream = null;
 
 const EMOJIS = ['🥛','🧈','🥚','🧀','🍗','🥩','🐟','🥦','🍅','🍎','🍊','🫙','🍺','🧃','🍹','🥗','🍱','🫐','🥕','🧄','📦','🍞','🥬','🫒'];
+const MONTHS_DE = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+const DAYS_DE = ['Mo','Di','Mi','Do','Fr','Sa','So'];
 
-/* ─────────────── Storage ─────────────── */
-function load() {
-  try { products = JSON.parse(localStorage.getItem('fridge_v2') || '[]'); } catch(e) { products = []; }
-}
-function persist() {
-  localStorage.setItem('fridge_v2', JSON.stringify(products));
-  sendToSW();
+/* ══ STORAGE ══ */
+function load() { try { products = JSON.parse(localStorage.getItem('fridge_v2')||'[]'); } catch(e){ products=[]; } }
+function persist() { localStorage.setItem('fridge_v2', JSON.stringify(products)); sendToSW(); }
+function loadSettings() {
+  warnDays = parseInt(localStorage.getItem('warnDays')||'2', 10);
+  const ss = document.getElementById('sort-select');
+  const saved = localStorage.getItem('sortMode')||'mhd';
+  ss.value = saved; sortMode = saved;
 }
 
-/* ─────────────── Date helpers ─────────────── */
-function today() { const d = new Date(); d.setHours(0,0,0,0); return d; }
-function daysLeft(mhd) {
-  const t = today(), m = new Date(mhd); m.setHours(0,0,0,0);
-  return Math.round((m - t) / 86400000);
-}
-function statusOf(d) { return d < 0 ? 'exp' : d <= warnDays ? 'warn' : 'ok'; }
-function fmtDate(s) { if (!s) return '–'; const [y,m,d] = s.split('-'); return `${d}.${m}.${y}`; }
+/* ══ DATE HELPERS ══ */
+function today() { const d=new Date(); d.setHours(0,0,0,0); return d; }
+function daysLeft(mhd) { const t=today(), m=new Date(mhd); m.setHours(0,0,0,0); return Math.round((m-t)/86400000); }
+function statusOf(d) { return d<0?'exp':d<=warnDays?'warn':'ok'; }
+function fmtDate(s) { if(!s)return'–'; const[y,m,d]=s.split('-'); return`${d}.${m}.${y}`; }
 function badgeText(d) {
-  if (d < 0) return `${Math.abs(d)} Tag${Math.abs(d)===1?'':'en'} überfällig`;
-  if (d === 0) return 'Heute!';
-  if (d === 1) return 'Morgen';
-  return `${d} Tage`;
+  if(d<0)return`${Math.abs(d)} Tag${Math.abs(d)===1?'':'en'} überfällig`;
+  if(d===0)return'Heute!'; if(d===1)return'Morgen';
+  return`${d} Tage`;
 }
-function barPct(d, st) {
-  if (st === 'exp') return 100;
-  if (st === 'warn') return Math.max(15, 100 - (d / 3) * 80);
-  return Math.min(100, Math.max(10, 100 - (d / 30) * 90));
+function barPct(d,st) {
+  if(st==='exp')return 100;
+  if(st==='warn')return Math.max(15,100-(d/3)*80);
+  return Math.min(100,Math.max(10,100-(d/30)*90));
+}
+function isoDate(d) { return d.toISOString().split('T')[0]; }
+
+/* ══ VIEW SWITCHING ══ */
+function switchView(v) {
+  document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(el=>el.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+  document.getElementById('nav-'+v).classList.add('active');
+  if(v==='cal') renderCal();
 }
 
-/* ─────────────── Render ─────────────── */
+/* ══ RENDER LIST ══ */
 function render() {
-  const q = (document.getElementById('search').value || '').toLowerCase();
-  const t = today();
-  let ok=0, warn=0, exp=0;
-  products.forEach(p => { const st = statusOf(daysLeft(p.mhd)); if(st==='ok')ok++; else if(st==='warn')warn++; else exp++; });
-  document.getElementById('cnt-ok').textContent = ok;
-  document.getElementById('cnt-warn').textContent = warn;
-  document.getElementById('cnt-exp').textContent = exp;
+  sortMode = document.getElementById('sort-select').value;
+  localStorage.setItem('sortMode', sortMode);
 
-  let list = [...products];
-  if (filter !== 'all') list = list.filter(p => statusOf(daysLeft(p.mhd)) === filter);
-  if (q) list = list.filter(p => p.name.toLowerCase().includes(q) || (p.kat||'').toLowerCase().includes(q));
-  list.sort((a,b) => daysLeft(a.mhd) - daysLeft(b.mhd));
+  const q=(document.getElementById('search').value||'').toLowerCase();
+  let ok=0,warn=0,exp=0;
+  products.forEach(p=>{ const st=statusOf(daysLeft(p.mhd)); if(st==='ok')ok++; else if(st==='warn')warn++; else exp++; });
+  document.getElementById('cnt-ok').textContent=ok;
+  document.getElementById('cnt-warn').textContent=warn;
+  document.getElementById('cnt-exp').textContent=exp;
 
-  const el = document.getElementById('product-list');
-  document.getElementById('list-label').textContent = `${list.length} Produkt${list.length!==1?'e':''}`;
+  let list=[...products];
+  if(filter!=='all') list=list.filter(p=>statusOf(daysLeft(p.mhd))===filter);
+  if(q) list=list.filter(p=>p.name.toLowerCase().includes(q)||(p.kat||'').toLowerCase().includes(q));
 
-  if (!list.length) {
-    el.innerHTML = `<div class="empty">
-      <div class="empty-icon">${filter==='exp'?'✅':filter==='warn'?'🎉':'🧊'}</div>
-      <div class="empty-title">${filter==='all'&&!q ? 'Noch leer!' : 'Nichts gefunden'}</div>
-      <div class="empty-sub">${filter==='all'&&!q ? 'Scanne dein erstes Produkt.' : 'Versuch einen anderen Filter.'}</div>
-    </div>`;
+  // Sortierung
+  if(sortMode==='mhd')       list.sort((a,b)=>daysLeft(a.mhd)-daysLeft(b.mhd));
+  else if(sortMode==='name')  list.sort((a,b)=>a.name.localeCompare(b.name,'de'));
+  else if(sortMode==='kat')   list.sort((a,b)=>(a.kat||'zzz').localeCompare(b.kat||'zzz','de'));
+  else if(sortMode==='added') list.sort((a,b)=>(b.addedTs||0)-(a.addedTs||0));
+
+  const el=document.getElementById('product-list');
+  document.getElementById('list-label').textContent=`${list.length} Produkt${list.length!==1?'e':''}`;
+
+  if(!list.length){
+    el.innerHTML=`<div class="empty"><div class="empty-icon">${filter==='exp'?'✅':filter==='warn'?'🎉':'🧊'}</div><div class="empty-title">${filter==='all'&&!q?'Noch leer!':'Nichts gefunden'}</div><div class="empty-sub">${filter==='all'&&!q?'Tippe auf + um ein Produkt hinzuzufügen.':'Versuch einen anderen Filter.'}</div></div>`;
     return;
   }
 
-  el.innerHTML = list.map(p => {
-    const d = daysLeft(p.mhd), st = statusOf(d);
-    const pct = Math.round(barPct(d, st));
+  el.innerHTML=list.map(p=>{
+    const d=daysLeft(p.mhd), st=statusOf(d);
+    const pct=Math.round(barPct(d,st));
+    // Mengen-Tracking
+    const hasQty = p.qtyTotal && p.qtyTotal > 0;
+    const qtyCurrent = hasQty ? (p.qtyCurrent !== undefined ? p.qtyCurrent : p.qtyTotal) : null;
+    const qtyEmpty = hasQty && qtyCurrent <= 0;
+    const qtyRow = hasQty ? `
+      <div class="qty-row">
+        <span class="qty-lbl">${qtyEmpty?'<span class="qty-empty">⚠️ Leer!</span>':'Bestand:'}</span>
+        <button class="qty-btn" onclick="event.stopPropagation();changeQty('${p.id}',-1)" aria-label="Weniger">−</button>
+        <span class="qty-val">${qtyCurrent} / ${p.qtyTotal}${p.unit?' '+p.unit:''}</span>
+        <button class="qty-btn" onclick="event.stopPropagation();changeQty('${p.id}',+1)" aria-label="Mehr">+</button>
+      </div>` : '';
+
     return `<div class="card" onclick="editProduct('${p.id}')">
       <div class="card-top">
         <div class="card-emoji ${st}">${p.emoji||'📦'}</div>
         <div class="card-body">
           <div class="card-name">${p.name}</div>
-          <div class="card-sub">${[p.menge, p.kat, 'MHD: '+fmtDate(p.mhd)].filter(Boolean).join(' · ')}</div>
+          <div class="card-sub">${[p.kat,'MHD: '+fmtDate(p.mhd)].filter(Boolean).join(' · ')}</div>
         </div>
         <span class="badge ${st}">${badgeText(d)}</span>
         <button class="del-btn" onclick="event.stopPropagation();delProduct('${p.id}')" aria-label="Löschen">
@@ -465,454 +494,384 @@ function render() {
         </button>
       </div>
       <div class="bar"><div class="bar-fill ${st}" style="width:${pct}%"></div></div>
+      ${qtyRow}
     </div>`;
   }).join('');
 }
 
-function setFilter(f, el) {
-  filter = f;
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+function setFilter(f,el) {
+  filter=f;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
   render();
 }
 
-/* ─────────────── Scanner (Safari-kompatibel) ─────────────── */
-let quaggaRunning = false;
-let nativeStream = null;
+/* ══ MENGE ÄNDERN ══ */
+function changeQty(id, delta) {
+  const p=products.find(x=>x.id===id);
+  if(!p) return;
+  const cur = p.qtyCurrent !== undefined ? p.qtyCurrent : p.qtyTotal;
+  p.qtyCurrent = Math.max(0, Math.min(p.qtyTotal, cur + delta));
+  persist(); render();
+}
 
-async function startScanner() {
-  const statusEl = document.getElementById('scan-status');
-  const video = document.getElementById('video');
+/* ══ KALENDER ══ */
+function calShift(dir) {
+  if(dir===0) calOffset=0;
+  else calOffset+=dir;
+  calSelectedDate=null;
+  renderCal();
+}
 
-  // Erst Kamera-Stream direkt via getUserMedia starten (Safari braucht das explizit)
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
-      audio: false
+function renderCal() {
+  const base=new Date(); base.setDate(1);
+  base.setMonth(base.getMonth()+calOffset);
+  const year=base.getFullYear(), month=base.getMonth();
+  document.getElementById('cal-month-lbl').textContent=`${MONTHS_DE[month]} ${year}`;
+
+  // Erster Tag des Monats (ISO: Mo=0)
+  let firstDow = new Date(year,month,1).getDay(); // 0=So
+  firstDow = firstDow===0 ? 6 : firstDow-1; // Montag-basiert
+
+  const daysInMonth = new Date(year,month+1,0).getDate();
+  const todayStr = isoDate(today());
+
+  // Produkte nach Datum gruppieren
+  const byDate={};
+  products.forEach(p=>{ (byDate[p.mhd]||(byDate[p.mhd]=[])).push(p); });
+
+  // Header
+  let html='';
+  DAYS_DE.forEach(d=>{ html+=`<div class="cal-day-hd">${d}</div>`; });
+
+  // Leere Zellen vor Monatsbeginn
+  for(let i=0;i<firstDow;i++) html+=`<div></div>`;
+
+  for(let day=1;day<=daysInMonth;day++){
+    const ds=`${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    const isToday=ds===todayStr;
+    const isSel=ds===calSelectedDate;
+    const prods=byDate[ds]||[];
+
+    let dots='';
+    prods.slice(0,5).forEach(p=>{
+      const st=statusOf(daysLeft(p.mhd));
+      dots+=`<div class="cal-dot ${st}"></div>`;
     });
-    nativeStream = stream;
-    video.srcObject = stream;
-    video.setAttribute('playsinline', true);
-    await video.play();
-    statusEl.textContent = 'Barcode in den Rahmen halten …';
-    scanning = true;
-  } catch(e) {
-    statusEl.textContent = 'Kamera-Zugriff verweigert – bitte in Safari-Einstellungen erlauben.';
-    statusEl.className = 'scan-status error';
-    return;
+    if(prods.length>5) dots+=`<div class="cal-dot" style="background:var(--muted)"></div>`;
+
+    html+=`<div class="cal-cell${isToday?' today':''}${isSel?' selected':''}" onclick="calSelectDay('${ds}')" style="${isSel?'border-color:var(--blue-md);border-width:1.5px;background:var(--blue-lt);':''}">
+      <div class="cal-date" style="${isToday?'color:var(--blue);':''}">${day}</div>
+      <div class="cal-dots">${dots}</div>
+    </div>`;
   }
+  document.getElementById('cal-grid').innerHTML=html;
+  renderCalDetail(calSelectedDate);
+}
 
-  // BarcodeDetector API (iOS 17+, Chrome) — schnellster Weg
-  if ('BarcodeDetector' in window) {
-    try {
-      const detector = new BarcodeDetector({ formats: ['ean_13','ean_8','upc_a','upc_e','code_128','code_39','qr_code'] });
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      let lastScan = 0;
+function calSelectDay(ds) {
+  calSelectedDate = calSelectedDate===ds ? null : ds;
+  renderCal();
+}
 
-      async function nativeScanLoop() {
-        if (!scanning) return;
-        if (video.readyState === video.HAVE_ENOUGH_DATA) {
-          const now = Date.now();
-          if (now - lastScan > 300) {
-            lastScan = now;
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            ctx.drawImage(video, 0, 0);
-            try {
-              const codes = await detector.detect(canvas);
-              if (codes.length > 0 && scanning) {
-                scanning = false;
-                onBarcodeFound(codes[0].rawValue);
-                return;
-              }
-            } catch(e) {}
+function renderCalDetail(ds) {
+  const el=document.getElementById('cal-detail');
+  if(!ds){ el.innerHTML=''; return; }
+  const prods=products.filter(p=>p.mhd===ds);
+  if(!prods.length){ el.innerHTML=`<div class="cal-detail"><div class="cal-detail-title">${fmtDate(ds)}</div><div style="font-size:13px;color:var(--muted);">Keine Produkte an diesem Tag.</div></div>`; return; }
+  const items=prods.map(p=>{
+    const d=daysLeft(p.mhd), st=statusOf(d);
+    return `<div class="cal-detail-item">
+      <div class="cal-detail-emoji">${p.emoji||'📦'}</div>
+      <div class="cal-detail-name">${p.name}</div>
+      <span class="cal-detail-badge badge ${st}">${badgeText(d)}</span>
+    </div>`;
+  }).join('');
+  el.innerHTML=`<div class="cal-detail"><div class="cal-detail-title">📅 ${fmtDate(ds)} · ${prods.length} Produkt${prods.length!==1?'e':''}</div>${items}</div>`;
+}
+
+/* ══ SCANNER ══ */
+async function startScanner() {
+  const statusEl=document.getElementById('scan-status');
+  const video=document.getElementById('video');
+  try {
+    const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}},audio:false});
+    nativeStream=stream; video.srcObject=stream;
+    video.setAttribute('playsinline',true);
+    await video.play();
+    statusEl.textContent='Barcode in den Rahmen halten …';
+    scanning=true;
+  } catch(e) {
+    statusEl.textContent='Kamera-Zugriff verweigert – bitte in Safari-Einstellungen erlauben.';
+    statusEl.className='scan-status error'; return;
+  }
+  if('BarcodeDetector' in window){
+    try{
+      const det=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128','code_39','qr_code']});
+      const canvas=document.createElement('canvas');
+      const ctx=canvas.getContext('2d');
+      let last=0;
+      async function loop(){
+        if(!scanning)return;
+        if(video.readyState===video.HAVE_ENOUGH_DATA){
+          const now=Date.now();
+          if(now-last>300){
+            last=now; canvas.width=video.videoWidth; canvas.height=video.videoHeight;
+            ctx.drawImage(video,0,0);
+            try{ const codes=await det.detect(canvas); if(codes.length>0&&scanning){scanning=false;onBarcodeFound(codes[0].rawValue);return;} }catch(e){}
           }
         }
-        requestAnimationFrame(nativeScanLoop);
+        requestAnimationFrame(loop);
       }
-      requestAnimationFrame(nativeScanLoop);
-      return; // BarcodeDetector übernimmt
-    } catch(e) {}
+      requestAnimationFrame(loop); return;
+    }catch(e){}
   }
-
-  // Fallback: Quagga2 (funktioniert in älteren Safari/iOS-Versionen)
-  if (typeof Quagga === 'undefined') {
-    statusEl.textContent = 'Scanner nicht geladen – bitte Namen manuell eingeben.';
-    statusEl.className = 'scan-status error';
-    return;
-  }
-
-  Quagga.init({
-    inputStream: {
-      name: 'Live',
-      type: 'LiveStream',
-      target: document.getElementById('video'),
-      constraints: { facingMode: 'environment', width: 1280, height: 720 }
-    },
-    decoder: {
-      readers: ['ean_reader','ean_8_reader','upc_reader','code_128_reader','code_39_reader']
-    },
-    locate: true,
-    numOfWorkers: 0,
-    frequency: 5
-  }, function(err) {
-    if (err) {
-      statusEl.textContent = 'Scanner-Fehler – bitte Namen manuell eingeben.';
-      statusEl.className = 'scan-status error';
-      return;
-    }
-    quaggaRunning = true;
-    Quagga.start();
+  if(typeof Quagga==='undefined'){statusEl.textContent='Scanner nicht geladen – Namen manuell eingeben.';statusEl.className='scan-status error';return;}
+  Quagga.init({inputStream:{name:'Live',type:'LiveStream',target:document.getElementById('video'),constraints:{facingMode:'environment',width:1280,height:720}},decoder:{readers:['ean_reader','ean_8_reader','upc_reader','code_128_reader','code_39_reader']},locate:true,numOfWorkers:0,frequency:5},function(err){
+    if(err){statusEl.textContent='Scanner-Fehler – Namen manuell eingeben.';statusEl.className='scan-status error';return;}
+    quaggaRunning=true; Quagga.start();
   });
-
-  Quagga.onDetected(function(result) {
-    if (!scanning) return;
-    const code = result.codeResult.code;
-    if (!code) return;
-    scanning = false;
-    onBarcodeFound(code);
-  });
+  Quagga.onDetected(function(r){if(!scanning)return;const c=r.codeResult.code;if(!c)return;scanning=false;onBarcodeFound(c);});
 }
 
-function stopScanner() {
-  scanning = false;
-  // BarcodeDetector / native stream stoppen
-  if (nativeStream) {
-    nativeStream.getTracks().forEach(t => t.stop());
-    nativeStream = null;
-  }
-  const v = document.getElementById('video');
-  if (v) { v.srcObject = null; }
-  // Quagga stoppen
-  if (quaggaRunning) {
-    try { Quagga.stop(); } catch(e) {}
-    quaggaRunning = false;
-  }
+function stopScanner(){
+  scanning=false;
+  if(nativeStream){nativeStream.getTracks().forEach(t=>t.stop());nativeStream=null;}
+  const v=document.getElementById('video'); if(v)v.srcObject=null;
+  if(quaggaRunning){try{Quagga.stop();}catch(e){}quaggaRunning=false;}
 }
 
-function onBarcodeFound(barcode) {
-  const statusEl = document.getElementById('scan-status');
-  statusEl.textContent = `✅ Barcode: ${barcode}`;
-  statusEl.className = 'scan-status success';
-  // Produkt-DB-Lookup (Open Food Facts)
-  lookupBarcode(barcode);
+function onBarcodeFound(code){
+  const statusEl=document.getElementById('scan-status');
+  statusEl.textContent=`✅ Barcode: ${code}`; statusEl.className='scan-status success';
+  lookupBarcode(code);
 }
 
-async function lookupBarcode(code) {
-  const statusEl = document.getElementById('scan-status');
-  statusEl.textContent = `Produkt wird gesucht (${code})…`;
-  try {
-    const r = await fetch(`https://world.openfoodfacts.org/api/v0/product/${code}.json`);
-    const j = await r.json();
-    if (j.status === 1 && j.product) {
-      const p = j.product;
-      const name = p.product_name_de || p.product_name || p.generic_name_de || p.generic_name || '';
-      const menge = p.quantity || '';
-      if (name) {
-        document.getElementById('inp-name').value = name;
-        document.getElementById('inp-menge').value = menge;
-        statusEl.textContent = `✅ Gefunden: ${name}`;
-        statusEl.className = 'scan-status success';
-        // Auto-Emoji
-        const cats = (p.categories || '').toLowerCase();
-        if (cats.includes('milch') || cats.includes('joghurt')) pickEmoji('🥛');
-        else if (cats.includes('käse') || cats.includes('cheese')) pickEmoji('🧀');
-        else if (cats.includes('fleisch') || cats.includes('wurst') || cats.includes('meat')) pickEmoji('🥩');
-        else if (cats.includes('ei') || cats.includes('egg')) pickEmoji('🥚');
-        else if (cats.includes('fisch') || cats.includes('fish')) pickEmoji('🐟');
-        else if (cats.includes('getränk') || cats.includes('saft') || cats.includes('juice')) pickEmoji('🧃');
-        document.getElementById('inp-mhd').focus();
-        return;
+async function lookupBarcode(code){
+  const statusEl=document.getElementById('scan-status');
+  statusEl.textContent=`Produkt wird gesucht…`;
+  try{
+    const r=await fetch(`https://world.openfoodfacts.org/api/v0/product/${code}.json`);
+    const j=await r.json();
+    if(j.status===1&&j.product){
+      const p=j.product;
+      const name=p.product_name_de||p.product_name||p.generic_name_de||p.generic_name||'';
+      const qty=p.quantity||'';
+      if(name){
+        document.getElementById('inp-name').value=name;
+        // Menge aus Packungsangabe parsen
+        const numMatch=qty.match(/(\d+)/);
+        if(numMatch) document.getElementById('inp-qty-total').value=numMatch[1];
+        const unitMatch=qty.match(/[a-zA-Z]+/);
+        if(unitMatch) document.getElementById('inp-unit').value=unitMatch[0];
+        statusEl.textContent=`✅ Gefunden: ${name}`; statusEl.className='scan-status success';
+        const cats=(p.categories||'').toLowerCase();
+        if(cats.includes('milch')||cats.includes('joghurt'))pickEmoji('🥛');
+        else if(cats.includes('käse')||cats.includes('cheese'))pickEmoji('🧀');
+        else if(cats.includes('fleisch')||cats.includes('wurst')||cats.includes('meat'))pickEmoji('🥩');
+        else if(cats.includes('ei')||cats.includes('egg'))pickEmoji('🥚');
+        else if(cats.includes('fisch')||cats.includes('fish'))pickEmoji('🐟');
+        else if(cats.includes('getränk')||cats.includes('saft')||cats.includes('juice'))pickEmoji('🧃');
+        document.getElementById('inp-mhd').focus(); return;
       }
     }
-    statusEl.textContent = `Produkt nicht gefunden – bitte Namen eingeben.`;
-    statusEl.className = 'scan-status';
+    statusEl.textContent=`Nicht gefunden – bitte Namen eingeben.`; statusEl.className='scan-status';
     document.getElementById('inp-name').focus();
-  } catch(e) {
-    statusEl.textContent = `Offline – bitte Namen manuell eingeben.`;
-    statusEl.className = 'scan-status';
-  }
+  }catch(e){statusEl.textContent=`Offline – bitte Namen manuell eingeben.`;statusEl.className='scan-status';}
 }
 
-/* ─────────────── Add / Edit ─────────────── */
-function openAdd() {
-  editingId = null;
-  selectedEmoji = '📦';
-  document.getElementById('sheet-heading').textContent = 'Produkt hinzufügen';
-  document.getElementById('inp-name').value = '';
-  document.getElementById('inp-menge').value = '';
-  document.getElementById('inp-kat').value = '';
-  // Default MHD = today + 7 Tage
-  const def = new Date(); def.setDate(def.getDate() + 7);
-  document.getElementById('inp-mhd').value = def.toISOString().split('T')[0];
+/* ══ ADD / EDIT ══ */
+function openAdd(){
+  editingId=null; selectedEmoji='📦';
+  document.getElementById('sheet-heading').textContent='Produkt hinzufügen';
+  document.getElementById('inp-name').value='';
+  document.getElementById('inp-qty-total').value='';
+  document.getElementById('inp-unit').value='';
+  document.getElementById('inp-kat').value='';
+  const def=new Date(); def.setDate(def.getDate()+7);
+  document.getElementById('inp-mhd').value=def.toISOString().split('T')[0];
   buildEmojiGrid();
   document.getElementById('overlay').classList.add('open');
-  document.getElementById('scan-status').textContent = 'Kamera wird gestartet…';
-  document.getElementById('scan-status').className = 'scan-status';
-  setTimeout(startScanner, 300);
+  document.getElementById('scan-status').textContent='Kamera wird gestartet…';
+  document.getElementById('scan-status').className='scan-status';
+  setTimeout(startScanner,300);
 }
 
-function editProduct(id) {
-  const p = products.find(x => x.id === id);
-  if (!p) return;
-  editingId = id;
-  selectedEmoji = p.emoji || '📦';
-  document.getElementById('sheet-heading').textContent = 'Produkt bearbeiten';
-  document.getElementById('inp-name').value = p.name;
-  document.getElementById('inp-menge').value = p.menge || '';
-  document.getElementById('inp-kat').value = p.kat || '';
-  document.getElementById('inp-mhd').value = p.mhd;
+function editProduct(id){
+  const p=products.find(x=>x.id===id); if(!p) return;
+  editingId=id; selectedEmoji=p.emoji||'📦';
+  document.getElementById('sheet-heading').textContent='Produkt bearbeiten';
+  document.getElementById('inp-name').value=p.name;
+  document.getElementById('inp-qty-total').value=p.qtyTotal||'';
+  document.getElementById('inp-unit').value=p.unit||'';
+  document.getElementById('inp-kat').value=p.kat||'';
+  document.getElementById('inp-mhd').value=p.mhd;
   buildEmojiGrid();
-  document.getElementById('scan-status').textContent = 'Barcode neu scannen oder Name ändern.';
+  document.getElementById('scan-status').textContent='Barcode neu scannen oder Felder ändern.';
   document.getElementById('overlay').classList.add('open');
-  setTimeout(startScanner, 300);
+  setTimeout(startScanner,300);
 }
 
-function closeAdd() {
-  stopScanner();
-  document.getElementById('overlay').classList.remove('open');
+function closeAdd(){stopScanner();document.getElementById('overlay').classList.remove('open');}
+
+function buildEmojiGrid(){
+  document.getElementById('emoji-grid').innerHTML=EMOJIS.map(em=>`<div class="emoji-opt ${em===selectedEmoji?'selected':''}" onclick="pickEmoji('${em}')">${em}</div>`).join('');
 }
+function pickEmoji(em){selectedEmoji=em;document.querySelectorAll('.emoji-opt').forEach(el=>el.classList.toggle('selected',el.textContent===em));}
 
-function overlayClick(e) {
-  if (e.target === document.getElementById('overlay')) closeAdd();
-}
+function saveProduct(){
+  const name=document.getElementById('inp-name').value.trim();
+  const mhd=document.getElementById('inp-mhd').value;
+  if(!name){showToast('Bitte Produktname eingeben');return;}
+  if(!mhd){showToast('Bitte MHD angeben');return;}
+  const qtyTotal=parseInt(document.getElementById('inp-qty-total').value)||0;
+  const unit=document.getElementById('inp-unit').value.trim();
+  const kat=document.getElementById('inp-kat').value;
 
-function buildEmojiGrid() {
-  document.getElementById('emoji-grid').innerHTML = EMOJIS.map(em =>
-    `<div class="emoji-opt ${em===selectedEmoji?'selected':''}" onclick="pickEmoji('${em}')">${em}</div>`
-  ).join('');
-}
-
-function pickEmoji(em) {
-  selectedEmoji = em;
-  document.querySelectorAll('.emoji-opt').forEach(el => {
-    el.classList.toggle('selected', el.textContent === em);
-  });
-}
-
-function saveProduct() {
-  const name = document.getElementById('inp-name').value.trim();
-  const mhd  = document.getElementById('inp-mhd').value;
-  if (!name) { showToast('Bitte Produktname eingeben'); return; }
-  if (!mhd)  { showToast('Bitte MHD angeben'); return; }
-
-  if (editingId) {
-    const idx = products.findIndex(p => p.id === editingId);
-    if (idx >= 0) {
-      products[idx] = { ...products[idx], name, mhd,
-        menge: document.getElementById('inp-menge').value.trim(),
-        kat:   document.getElementById('inp-kat').value,
-        emoji: selectedEmoji };
+  if(editingId){
+    const idx=products.findIndex(p=>p.id===editingId);
+    if(idx>=0){
+      const old=products[idx];
+      products[idx]={...old,name,mhd,emoji:selectedEmoji,kat,
+        qtyTotal:qtyTotal||undefined,
+        qtyCurrent:qtyTotal ? (old.qtyTotal===qtyTotal ? old.qtyCurrent : qtyTotal) : undefined,
+        unit:unit||undefined};
     }
     showToast('✅ Produkt aktualisiert');
   } else {
-    products.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2,5),
-      name, mhd,
-      menge: document.getElementById('inp-menge').value.trim(),
-      kat:   document.getElementById('inp-kat').value,
-      emoji: selectedEmoji });
+    products.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),
+      name,mhd,emoji:selectedEmoji,kat,
+      qtyTotal:qtyTotal||undefined,
+      qtyCurrent:qtyTotal||undefined,
+      unit:unit||undefined,
+      addedTs:Date.now()});
     showToast('✅ Produkt gespeichert');
   }
-  persist();
-  render();
-  closeAdd();
-  scheduleCheck();
+  persist(); render(); closeAdd(); scheduleCheck();
 }
 
-function delProduct(id) {
-  const p = products.find(x => x.id === id);
-  if (!p) return;
-  if (!confirm(`„${p.name}" löschen?`)) return;
-  products = products.filter(x => x.id !== id);
-  persist();
-  render();
-  showToast('🗑️ Gelöscht');
+function delProduct(id){
+  const p=products.find(x=>x.id===id); if(!p)return;
+  if(!confirm(`„${p.name}" löschen?`))return;
+  products=products.filter(x=>x.id!==id);
+  persist(); render(); showToast('🗑️ Gelöscht');
 }
 
-/* ─────────────── Notifications ─────────────── */
-async function requestNotifications() {
-  if (!('Notification' in window)) { showToast('Benachrichtigungen nicht unterstützt'); return; }
-  const perm = await Notification.requestPermission();
-  if (perm === 'granted') {
-    document.getElementById('notif-bar').style.display = 'none';
-    showToast('🔔 Benachrichtigungen aktiviert!');
-    scheduleCheck();
-  } else {
-    showToast('Bitte in Safari-Einstellungen erlauben');
-  }
+/* ══ NOTIFICATIONS ══ */
+async function requestNotifications(){
+  if(!('Notification' in window)){showToast('Benachrichtigungen nicht unterstützt');return;}
+  const perm=await Notification.requestPermission();
+  if(perm==='granted'){document.getElementById('notif-bar').style.display='none';showToast('🔔 Benachrichtigungen aktiviert!');scheduleCheck();}
+  else showToast('Bitte in Safari-Einstellungen erlauben');
 }
 
-function scheduleCheck() {
-  if (!('Notification' in window) || Notification.permission !== 'granted') return;
-  // Sofortiger Check
+function scheduleCheck(){
+  if(!('Notification' in window)||Notification.permission!=='granted')return;
   doMhdCheck();
-  // Täglich wiederholen (alle 24h, nur solange Tab offen)
   clearInterval(window._mhdInterval);
-  window._mhdInterval = setInterval(doMhdCheck, 24 * 60 * 60 * 1000);
+  window._mhdInterval=setInterval(doMhdCheck,24*60*60*1000);
 }
 
-function doMhdCheck() {
-  const warn = products.filter(p => { const d = daysLeft(p.mhd); return d >= 0 && d <= warnDays; });
-  const exp  = products.filter(p => daysLeft(p.mhd) < 0);
-  if (warn.length || exp.length) {
-    let body = '';
-    if (exp.length)  body += `⚠️ Abgelaufen: ${exp.map(p=>p.name).join(', ')}. `;
-    if (warn.length) body += `🕐 In ≤${warnDays} Tag${warnDays===1?'':'en'}: ${warn.map(p=>p.name).join(', ')}.`;
-    new Notification('🥛 Kühlschrank-Reminder', { body: body.trim(), tag: 'mhd', renotify: true });
+function doMhdCheck(){
+  const warn=products.filter(p=>{const d=daysLeft(p.mhd);return d>=0&&d<=warnDays;});
+  const exp=products.filter(p=>daysLeft(p.mhd)<0);
+  if(warn.length||exp.length){
+    let body='';
+    if(exp.length) body+=`⚠️ Abgelaufen: ${exp.map(p=>p.name).join(', ')}. `;
+    if(warn.length) body+=`🕐 In ≤${warnDays} Tag${warnDays===1?'':'en'}: ${warn.map(p=>p.name).join(', ')}.`;
+    new Notification('🥛 Kühlschrank-Reminder',{body:body.trim(),tag:'mhd',renotify:true});
   }
   sendToSW();
 }
 
-function sendToSW() {
-  if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-    navigator.serviceWorker.controller.postMessage({ type: 'CHECK_MHD', products, warnDays });
-  }
+function sendToSW(){
+  if(navigator.serviceWorker&&navigator.serviceWorker.controller)
+    navigator.serviceWorker.controller.postMessage({type:'CHECK_MHD',products,warnDays});
 }
 
-function checkNotifBar() {
-  if (!('Notification' in window)) return;
-  if (Notification.permission !== 'granted') {
-    document.getElementById('notif-bar').style.display = 'flex';
-  }
+function checkNotifBar(){
+  if(!('Notification' in window))return;
+  if(Notification.permission!=='granted')document.getElementById('notif-bar').style.display='flex';
 }
 
-/* ─────────────── Settings ─────────────── */
-let warnDays = 2;
-
-function loadSettings() {
-  warnDays = parseInt(localStorage.getItem('warnDays') || '2', 10);
-}
-
-function openSettings() {
-  // Slider auf gespeicherten Wert setzen
-  const slider = document.getElementById('warn-days-slider');
-  slider.value = warnDays;
-  updateDaysPreview(warnDays);
-  // Notification-Status aktualisieren
-  updateNotifStatus();
+/* ══ SETTINGS ══ */
+function openSettings(){
+  document.getElementById('warn-days-slider').value=warnDays;
+  updateDaysPreview(warnDays); updateNotifStatus();
   document.getElementById('settings-overlay').classList.add('open');
 }
+function closeSettings(){document.getElementById('settings-overlay').classList.remove('open');}
 
-function closeSettings() {
-  document.getElementById('settings-overlay').classList.remove('open');
-}
-
-function settingsOverlayClick(e) {
-  if (e.target === document.getElementById('settings-overlay')) closeSettings();
-}
-
-function updateDaysPreview(val) {
-  const n = parseInt(val, 10);
-  document.getElementById('days-display').textContent = `${n} Tag${n === 1 ? '' : 'e'}`;
-  const preview = document.getElementById('warn-preview');
-  // Zeige betroffene Produkte mit aktuellem Schwellwert
-  const affected = products.filter(p => { const d = daysLeft(p.mhd); return d >= 0 && d <= n; });
-  const exp = products.filter(p => daysLeft(p.mhd) < 0);
-  if (affected.length === 0 && exp.length === 0) {
-    preview.textContent = `✅ Aktuell keine Produkte innerhalb der Vorwarnzeit.`;
-  } else {
-    let msg = '';
-    if (exp.length) msg += `⚠️ ${exp.length} abgelaufen. `;
-    if (affected.length) msg += `🕐 ${affected.length} Produkt${affected.length>1?'e':''} würde${affected.length>1?'n':''} eine Erinnerung auslösen: ${affected.map(p=>p.name).slice(0,3).join(', ')}${affected.length>3?'…':''}.`;
-    preview.textContent = msg.trim();
+function updateDaysPreview(val){
+  const n=parseInt(val,10);
+  document.getElementById('days-display').textContent=`${n} Tag${n===1?'':'e'}`;
+  const affected=products.filter(p=>{const d=daysLeft(p.mhd);return d>=0&&d<=n;});
+  const exp=products.filter(p=>daysLeft(p.mhd)<0);
+  const prev=document.getElementById('warn-preview');
+  if(!affected.length&&!exp.length){prev.textContent='✅ Aktuell keine Produkte in der Vorwarnzeit.';}
+  else{
+    let msg='';
+    if(exp.length) msg+=`⚠️ ${exp.length} abgelaufen. `;
+    if(affected.length) msg+=`🕐 ${affected.length} Produkt${affected.length>1?'e':''} in der Vorwarnzeit: ${affected.map(p=>p.name).slice(0,3).join(', ')}${affected.length>3?'…':''}.`;
+    prev.textContent=msg.trim();
   }
 }
-
-function saveDaysSetting(val) {
-  warnDays = parseInt(val, 10);
-  localStorage.setItem('warnDays', warnDays);
+function saveDaysSetting(val){
+  warnDays=parseInt(val,10);
+  localStorage.setItem('warnDays',warnDays);
   showToast(`✅ Vorwarnzeit: ${warnDays} Tag${warnDays===1?'':'e'}`);
   scheduleCheck();
 }
-
-function updateNotifStatus() {
-  const btn = document.getElementById('notif-toggle');
-  const txt = document.getElementById('notif-status-text');
-  if (!('Notification' in window)) {
-    txt.textContent = 'Nicht unterstützt (iOS 16.4+ erforderlich)';
-    btn.textContent = '–'; btn.disabled = true;
-    return;
-  }
-  const perm = Notification.permission;
-  if (perm === 'granted') {
-    txt.textContent = 'Aktiv – du wirst rechtzeitig erinnert.';
-    btn.textContent = 'Testen';
-    btn.style.background = 'var(--green)';
-  } else if (perm === 'denied') {
-    txt.textContent = 'Blockiert – bitte in Safari-Einstellungen erlauben.';
-    btn.textContent = 'Einstellungen';
-    btn.style.background = 'var(--red)';
-  } else {
-    txt.textContent = 'Noch nicht aktiviert.';
-    btn.textContent = 'Aktivieren';
-    btn.style.background = 'var(--blue)';
-  }
+function updateNotifStatus(){
+  const btn=document.getElementById('notif-toggle');
+  const txt=document.getElementById('notif-status-text');
+  if(!('Notification' in window)){txt.textContent='Nicht unterstützt (iOS 16.4+)';btn.textContent='–';btn.disabled=true;return;}
+  const perm=Notification.permission;
+  if(perm==='granted'){txt.textContent='Aktiv – du wirst rechtzeitig erinnert.';btn.textContent='Testen';btn.style.background='var(--green)';}
+  else if(perm==='denied'){txt.textContent='Blockiert – bitte in Safari-Einstellungen erlauben.';btn.textContent='Einstellungen';btn.style.background='var(--red)';}
+  else{txt.textContent='Noch nicht aktiviert.';btn.textContent='Aktivieren';btn.style.background='var(--blue)';}
+}
+async function toggleNotifFromSettings(){
+  if(!('Notification' in window))return;
+  const perm=Notification.permission;
+  if(perm==='granted'){new Notification('🥛 Test-Erinnerung',{body:`Erinnerungen ${warnDays} Tag${warnDays===1?'':'e'} vor Ablauf.`,tag:'test'});showToast('🔔 Test gesendet!');}
+  else if(perm==='denied'){showToast('In Einstellungen → Safari → Mitteilungen erlauben');}
+  else{await requestNotifications();updateNotifStatus();}
+}
+function deleteExpiredFromSettings(){
+  const n=products.filter(p=>daysLeft(p.mhd)<0).length;
+  if(!n){showToast('Keine abgelaufenen Produkte');return;}
+  if(!confirm(`${n} abgelaufene${n>1?' Produkte':' Produkt'} löschen?`))return;
+  products=products.filter(p=>daysLeft(p.mhd)>=0);
+  persist();render();showToast(`🗑️ ${n} Produkt${n>1?'e':''} gelöscht`);updateDaysPreview(warnDays);
+}
+function deleteAllFromSettings(){
+  if(!confirm(`Alle ${products.length} Produkte löschen?`))return;
+  products=[];persist();render();showToast('🗑️ Alle Daten gelöscht');closeSettings();
 }
 
-async function toggleNotifFromSettings() {
-  if (!('Notification' in window)) return;
-  const perm = Notification.permission;
-  if (perm === 'granted') {
-    // Test-Benachrichtigung senden
-    new Notification('🥛 Test-Erinnerung', {
-      body: `Du bekommst Erinnerungen ${warnDays} Tag${warnDays===1?'':'e'} vor Ablauf.`,
-      tag: 'test'
-    });
-    showToast('🔔 Test-Benachrichtigung gesendet!');
-  } else if (perm === 'denied') {
-    // iOS: kann man nicht per JS entsperren, User muss in Einstellungen
-    showToast('Bitte in Einstellungen → Safari → erlauben');
-  } else {
-    await requestNotifications();
-    updateNotifStatus();
-  }
-}
-
-function deleteExpiredFromSettings() {
-  const n = products.filter(p => daysLeft(p.mhd) < 0).length;
-  if (n === 0) { showToast('Keine abgelaufenen Produkte'); return; }
-  if (!confirm(`${n} abgelaufene${n>1?' Produkte':' Produkt'} wirklich löschen?`)) return;
-  products = products.filter(p => daysLeft(p.mhd) >= 0);
-  persist(); render();
-  showToast(`🗑️ ${n} Produkt${n>1?'e':''} gelöscht`);
-  updateDaysPreview(warnDays);
-}
-
-function deleteAllFromSettings() {
-  if (!confirm(`Alle ${products.length} Produkte löschen? Das kann nicht rückgängig gemacht werden.`)) return;
-  products = [];
-  persist(); render();
-  showToast('🗑️ Alle Daten gelöscht');
-  closeSettings();
-}
-
-/* ─────────────── Toast ─────────────── */
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
+/* ══ TOAST ══ */
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
   clearTimeout(window._toastTimer);
-  window._toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+  window._toastTimer=setTimeout(()=>t.classList.remove('show'),2500);
 }
 
-/* ─────────────── Service Worker ─────────────── */
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js').then(reg => {
-    console.log('SW registered', reg.scope);
-  }).catch(e => console.warn('SW error', e));
+/* ══ SERVICE WORKER ══ */
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('./sw.js').then(r=>console.log('SW ok',r.scope)).catch(e=>console.warn('SW err',e));
 }
 
-/* ─────────────── Init ─────────────── */
+/* ══ INIT ══ */
 loadSettings();
 load();
 render();
 checkNotifBar();
 scheduleCheck();
 
-// Täglich beim App-Start prüfen (beim Öffnen der App)
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') { doMhdCheck(); render(); }
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible'){doMhdCheck();render();}
 });
 </script>
 </body>
