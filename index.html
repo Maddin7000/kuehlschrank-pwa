@@ -861,7 +861,15 @@ function showToast(msg){
 
 /* ══ SERVICE WORKER ══ */
 if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('./sw.js').then(r=>console.log('SW ok',r.scope)).catch(e=>console.warn('SW err',e));
+  // Nur auf echtem Deployment registrieren (nicht in Vorschauen / iframes)
+  const swHost = location.hostname;
+  const isLocalOrDeployed = swHost === 'localhost' || swHost === '127.0.0.1' ||
+    (!swHost.includes('claudeusercontent') && !swHost.includes('claude.ai'));
+  if(isLocalOrDeployed){
+    navigator.serviceWorker.register('./sw.js')
+      .then(r => console.log('SW registriert:', r.scope))
+      .catch(e => console.warn('SW nicht verfügbar (kein Fehler):', e.message));
+  }
 }
 
 /* ══ INIT ══ */
