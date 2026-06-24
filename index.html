@@ -1064,38 +1064,44 @@ function leaveHousehold() {
   showToast('Synchronisierung beendet');
 }
 
+/* helpers called from updateSyncUI-generated buttons */
+function showFirebaseConfigForm() {
+  document.getElementById('firebase-config-section').style.display = 'block';
+  document.getElementById('join-section').style.display = 'none';
+}
+function showJoinForm() {
+  document.getElementById('join-section').style.display = 'block';
+  document.getElementById('firebase-config-section').style.display = 'none';
+}
+
 function updateSyncUI() {
   const card = document.getElementById('sync-settings-card');
-  if (!card) return; // settings not open yet
+  if (!card) return;
   const cfg = getFbConfig();
   const hid = getHouseholdId();
 
   if (!cfg) {
-    // Not configured yet
-    card.innerHTML = \`
-      <div class="settings-row-title">Noch nicht eingerichtet</div>
-      <div class="settings-row-sub" style="margin-bottom:10px;">Einmalig Firebase verbinden, dann alle Geräte automatisch synchron.</div>
-      <button onclick="document.getElementById('firebase-config-section').style.display='block';document.getElementById('join-section').style.display='none'" style="width:100%;background:var(--blue);border:none;border-radius:var(--radius-sm);color:#fff;font-size:14px;font-weight:600;padding:11px;cursor:pointer;">🔥 Firebase einrichten</button>
-    \`;
+    card.innerHTML = [
+      '<div class="settings-row-title">Noch nicht eingerichtet</div>',
+      '<div class="settings-row-sub" style="margin-bottom:10px;">Einmalig Firebase verbinden, dann alle Geräte automatisch synchron.</div>',
+      '<button onclick="showFirebaseConfigForm()" style="width:100%;background:var(--blue);border:none;border-radius:var(--radius-sm);color:#fff;font-size:14px;font-weight:600;padding:11px;cursor:pointer;">🔥 Firebase einrichten</button>'
+    ].join('');
   } else if (!hid) {
-    // Configured but no household
-    card.innerHTML = \`
-      <div class="settings-row-title" style="margin-bottom:6px;">Firebase verbunden ✅</div>
-      <div class="settings-row-sub" style="margin-bottom:12px;">Wähle: neuen Haushalt erstellen oder einem bestehenden beitreten.</div>
-      <button onclick="createNewHousehold()" style="width:100%;background:var(--blue);border:none;border-radius:var(--radius-sm);color:#fff;font-size:14px;font-weight:600;padding:11px;cursor:pointer;margin-bottom:8px;">➕ Neuen Haushalt erstellen</button>
-      <button onclick="document.getElementById('join-section').style.display='block';document.getElementById('firebase-config-section').style.display='none'" style="width:100%;background:var(--green-lt);border:0.5px solid var(--green);border-radius:var(--radius-sm);color:var(--green);font-size:14px;font-weight:600;padding:11px;cursor:pointer;">🔗 Haushalt beitreten</button>
-    \`;
+    card.innerHTML = [
+      '<div class="settings-row-title" style="margin-bottom:6px;">Firebase verbunden ✅</div>',
+      '<div class="settings-row-sub" style="margin-bottom:12px;">Wähle: neuen Haushalt erstellen oder einem bestehenden beitreten.</div>',
+      '<button onclick="createNewHousehold()" style="width:100%;background:var(--blue);border:none;border-radius:var(--radius-sm);color:#fff;font-size:14px;font-weight:600;padding:11px;cursor:pointer;margin-bottom:8px;">➕ Neuen Haushalt erstellen</button>',
+      '<button onclick="showJoinForm()" style="width:100%;background:var(--green-lt);border:0.5px solid var(--green);border-radius:var(--radius-sm);color:var(--green);font-size:14px;font-weight:600;padding:11px;cursor:pointer;margin-top:8px;">🔗 Haushalt beitreten</button>'
+    ].join('');
   } else {
-    // Active household
-    card.innerHTML = \`
-      <div class="settings-row-title" style="margin-bottom:4px;">Aktiver Haushalt</div>
-      <div class="settings-row-sub" style="margin-bottom:8px;">Diesen Code auf dem anderen iPhone eingeben:</div>
-      <div class="household-code">\${hid}</div>
-      <div class="settings-row-sub" style="text-align:center;margin-bottom:12px;">Alle Geräte mit diesem Code sind synchronisiert.</div>
-      <button onclick="leaveHousehold()" style="width:100%;background:var(--red-lt);border:0.5px solid var(--red);border-radius:var(--radius-sm);color:var(--red);font-size:13px;font-weight:600;padding:10px;cursor:pointer;">Synchronisierung beenden</button>
-    \`;
+    card.innerHTML = [
+      '<div class="settings-row-title" style="margin-bottom:4px;">Aktiver Haushalt</div>',
+      '<div class="settings-row-sub" style="margin-bottom:8px;">Diesen Code auf dem anderen iPhone eingeben:</div>',
+      '<div class="household-code">' + hid + '</div>',
+      '<div class="settings-row-sub" style="text-align:center;margin-bottom:12px;">Alle Geräte mit diesem Code sind synchronisiert.</div>',
+      '<button onclick="leaveHousehold()" style="width:100%;background:var(--red-lt);border:0.5px solid var(--red);border-radius:var(--radius-sm);color:var(--red);font-size:13px;font-weight:600;padding:10px;cursor:pointer;">Synchronisierung beenden</button>'
+    ].join('');
   }
-  // Show Firebase rules reminder when Firebase is configured
   const rulesReminder = document.getElementById('firebase-rules-reminder');
   if (rulesReminder) rulesReminder.style.display = cfg ? 'block' : 'none';
 }
