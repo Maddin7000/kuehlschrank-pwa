@@ -381,7 +381,12 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,'SF Pro Text','H
         </div>
       </div>
 
-      <div style="margin-top:20px;padding-bottom:8px;font-size:12px;color:var(--muted);text-align:center;line-height:1.8;">Kühlschrank MHD · PWA v1.3<br>Daten werden lokal auf deinem Gerät gespeichert.</div>
+      <div id="firebase-rules-reminder" style="display:none;margin-top:10px;padding:10px 12px;background:var(--amber-lt);border-radius:var(--radius-sm);font-size:12px;color:var(--amber);line-height:1.6;">
+        ⚠️ <strong>Firebase Testmode</strong> läuft 30 Tage. Danach unter Firebase Console → Realtime Database → Regeln diese Regel setzen:<br>
+        <code style="font-size:11px;word-break:break-all;">{"rules":{".read":"auth != null",".write":"auth != null"}}</code><br>
+        Oder für offenen Zugriff (nicht empfohlen): <code style="font-size:11px;">true</code>
+      </div>
+      <div style="margin-top:12px;padding-bottom:8px;font-size:12px;color:var(--muted);text-align:center;line-height:1.8;">Kühlschrank MHD · PWA v1.3<br>Daten werden lokal auf deinem Gerät gespeichert.</div>
     </div>
   </div>
 </div>
@@ -930,13 +935,16 @@ function genCode() {
 function initFirebase() {
   const cfg = getFbConfig();
   if (!cfg) return false;
+  // Reuse existing instance if already initialized
+  if (fbApp && fbDb) return true;
   try {
-    if (fbApp) { try { fbApp.delete(); } catch(e) {} }
-    fbApp = firebase.initializeApp({
+    // Check if already initialized under our app name
+    const existing = firebase.apps.find(a => a.name === 'kuehlschrank');
+    fbApp = existing || firebase.initializeApp({
       apiKey: cfg.apiKey,
       databaseURL: cfg.databaseURL,
       projectId: cfg.projectId
-    }, 'kuehlschrank-' + Date.now());
+    }, 'kuehlschrank');
     fbDb = firebase.database(fbApp);
     return true;
   } catch(e) {
@@ -951,11 +959,13 @@ function startSync(hid) {
   householdId = hid;
   fbRef = fbDb.ref('households/' + hid + '/products');
   syncListener = fbRef.on('value', snap => {
+    if (isSyncing) {
+      setSyncStatus('connected', 'Synchronisiert · Haushalt: ' + hid);
+      return;
+    }
     const data = snap.val();
-    if (data && !isSyncing) {
+    if (data) {
       const remote = Object.values(data);
-      // Merge: remote wins for each product by id
-      const localIds = new Set(products.map(p => p.id));
       const remoteIds = new Set(remote.map(p => p.id));
       // Add/update from remote
       remote.forEach(rp => {
@@ -963,12 +973,15 @@ function startSync(hid) {
         if (idx >= 0) products[idx] = rp;
         else products.push(rp);
       });
-      // Remove locally what was deleted remotely (only if we had it before)
-      products = products.filter(p => remoteIds.has(p.id) || !localIds.has(p.id));
-      localStorage.setItem('fridge_v2', JSON.stringify(products));
-      render();
-      if (document.getElementById('view-cal').classList.contains('active')) renderCal();
+      // Remove products deleted on remote
+      products = products.filter(p => remoteIds.has(p.id));
+    } else {
+      // Remote is empty — all products were deleted on another device
+      products = [];
     }
+    localStorage.setItem('fridge_v2', JSON.stringify(products));
+    render();
+    if (document.getElementById('view-cal').classList.contains('active')) renderCal();
     setSyncStatus('connected', 'Synchronisiert · Haushalt: ' + hid);
   }, err => {
     setSyncStatus('error', 'Sync-Fehler: ' + err.message);
@@ -1003,16 +1016,14 @@ function saveFirebaseConfig() {
   if (!apiKey || !databaseURL || !projectId) { showToast('Bitte alle Felder ausfüllen'); return; }
   saveFbConfig({ apiKey, databaseURL, projectId });
   document.getElementById('firebase-config-section').style.display = 'none';
+  // Reset cached instances so initFirebase uses new config
+  fbApp = null; fbDb = null;
   if (initFirebase()) {
-    // Create new household
-    const hid = genCode();
-    saveHouseholdId(hid);
-    startSync(hid);
-    pushToFirebase();
+    // Show create/join choice — do NOT auto-create household
     updateSyncUI();
-    showToast('✅ Firebase verbunden! Code: ' + hid);
+    showToast('✅ Firebase verbunden! Jetzt Haushalt wählen.');
   } else {
-    showToast('❌ Firebase-Fehler – Config prüfen');
+    showToast('❌ Firebase-Fehler – Config prüfen (Database URL korrekt?)');
   }
 }
 
@@ -1067,6 +1078,9 @@ function updateSyncUI() {
       <button onclick="leaveHousehold()" style="width:100%;background:var(--red-lt);border:0.5px solid var(--red);border-radius:var(--radius-sm);color:var(--red);font-size:13px;font-weight:600;padding:10px;cursor:pointer;">Synchronisierung beenden</button>
     \`;
   }
+  // Show Firebase rules reminder when Firebase is configured
+  const rulesReminder = document.getElementById('firebase-rules-reminder');
+  if (rulesReminder) rulesReminder.style.display = cfg ? 'block' : 'none';
 }
 
 function createNewHousehold() {
