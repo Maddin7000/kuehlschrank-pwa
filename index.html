@@ -10,6 +10,9 @@
 <link rel="manifest" href="./manifest.json">
 <title>Kühlschrank MHD</title>
 <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.8.4/dist/quagga.min.js"></script>
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <style>
 :root{
   --blue:#1A5FA8;--blue-lt:#E8F1FB;--blue-md:#2D7DD2;
@@ -216,6 +219,12 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,'SF Pro Text','H
     <span>Aktivieren →</span>
   </div>
 
+  <!-- Sync status bar -->
+  <div class="sync-bar" id="sync-bar" style="display:none">
+    <span class="sync-dot" id="sync-dot"></span>
+    <p id="sync-bar-text"></p>
+  </div>
+
   <div class="scroll" id="main-scroll">
 
     <!-- ══ VIEW: LISTE ══ -->
@@ -328,7 +337,51 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,'SF Pro Text','H
           <button onclick="deleteAllFromSettings()" style="background:var(--red-lt);border:none;border-radius:var(--radius-sm);color:var(--red);font-size:13px;font-weight:600;padding:8px 14px;cursor:pointer;white-space:nowrap;">Reset</button>
         </div>
       </div>
-      <div style="margin-top:20px;padding-bottom:8px;font-size:12px;color:var(--muted);text-align:center;line-height:1.8;">Kühlschrank MHD · PWA v1.2<br>Daten werden lokal auf deinem Gerät gespeichert.</div>
+      <div class="settings-label" style="margin-top:20px;">💾 Datensicherung</div>
+      <div class="settings-card">
+        <div class="settings-row-title">Backup exportieren</div>
+        <div class="settings-row-sub" style="margin-bottom:10px;">Alle Produkte als JSON-Datei herunterladen — vor Updates empfohlen.</div>
+        <button onclick="exportData()" style="width:100%;background:var(--blue);border:none;border-radius:var(--radius-sm);color:#fff;font-size:14px;font-weight:600;padding:11px;cursor:pointer;">📤  Backup herunterladen</button>
+      </div>
+      <div class="settings-card" style="margin-top:10px;">
+        <div class="settings-row-title">Backup importieren</div>
+        <div class="settings-row-sub" style="margin-bottom:10px;">JSON-Backup einlesen — bestehende Daten werden zusammengeführt.</div>
+        <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
+        <button onclick="document.getElementById('import-file').click()" style="width:100%;background:var(--green-lt);border:0.5px solid var(--green);border-radius:var(--radius-sm);color:var(--green);font-size:14px;font-weight:600;padding:11px;cursor:pointer;">📥  Backup einlesen</button>
+      </div>
+      <div class="settings-label" style="margin-top:20px;">🔄 Geräte synchronisieren</div>
+      <div class="settings-card" id="sync-settings-card">
+        <!-- filled dynamically by updateSyncUI() -->
+      </div>
+
+      <!-- Firebase Config Sheet (shown inline) -->
+      <div id="firebase-config-section" style="display:none;margin-top:10px;">
+        <div class="settings-card" style="border:1.5px solid var(--blue-md);">
+          <div class="settings-row-title" style="margin-bottom:6px;">🔥 Firebase einrichten</div>
+          <div class="settings-row-sub" style="margin-bottom:12px;">
+            Einmalige Einrichtung. Kostenloser Firebase-Account erforderlich.<br>
+            <a href="https://console.firebase.google.com" target="_blank" style="color:var(--blue);font-weight:600;">→ console.firebase.google.com</a>
+          </div>
+          <div class="field"><label>API Key</label><input id="fb-apikey" type="text" placeholder="AIzaSy…" autocomplete="off"></div>
+          <div class="field"><label>Database URL</label><input id="fb-dburl" type="text" placeholder="https://DEIN-PROJEKT.firebaseio.com" autocomplete="off"></div>
+          <div class="field"><label>Project ID</label><input id="fb-projectid" type="text" placeholder="mein-kuehlschrank-abc12" autocomplete="off"></div>
+          <button onclick="saveFirebaseConfig()" style="width:100%;background:var(--blue);border:none;border-radius:var(--radius-sm);color:#fff;font-size:14px;font-weight:600;padding:11px;cursor:pointer;margin-top:4px;">Verbinden</button>
+          <button onclick="document.getElementById('firebase-config-section').style.display='none'" style="width:100%;background:none;border:none;color:var(--muted);font-size:13px;padding:8px;cursor:pointer;margin-top:4px;">Abbrechen</button>
+        </div>
+      </div>
+
+      <!-- Join Household Sheet -->
+      <div id="join-section" style="display:none;margin-top:10px;">
+        <div class="settings-card" style="border:1.5px solid var(--blue-md);">
+          <div class="settings-row-title" style="margin-bottom:6px;">Haushalt beitreten</div>
+          <div class="settings-row-sub" style="margin-bottom:12px;">Haushaltscode vom anderen iPhone eingeben.</div>
+          <input class="code-input" id="join-code-input" type="text" maxlength="6" placeholder="ABC123" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')">
+          <button onclick="joinHousehold()" style="width:100%;background:var(--blue);border:none;border-radius:var(--radius-sm);color:#fff;font-size:14px;font-weight:600;padding:11px;cursor:pointer;margin-top:10px;">Beitreten</button>
+          <button onclick="document.getElementById('join-section').style.display='none'" style="width:100%;background:none;border:none;color:var(--muted);font-size:13px;padding:8px;cursor:pointer;">Abbrechen</button>
+        </div>
+      </div>
+
+      <div style="margin-top:20px;padding-bottom:8px;font-size:12px;color:var(--muted);text-align:center;line-height:1.8;">Kühlschrank MHD · PWA v1.3<br>Daten werden lokal auf deinem Gerät gespeichert.</div>
     </div>
   </div>
 </div>
@@ -402,7 +455,11 @@ const DAYS_DE = ['Mo','Di','Mi','Do','Fr','Sa','So'];
 
 /* ══ STORAGE ══ */
 function load() { try { products = JSON.parse(localStorage.getItem('fridge_v2')||'[]'); } catch(e){ products=[]; } }
-function persist() { localStorage.setItem('fridge_v2', JSON.stringify(products)); sendToSW(); }
+function persist() {
+  localStorage.setItem('fridge_v2', JSON.stringify(products));
+  sendToSW();
+  if (householdId && fbRef) pushToFirebase();
+}
 function loadSettings() {
   warnDays = parseInt(localStorage.getItem('warnDays')||'2', 10);
   sortMode = localStorage.getItem('sortMode')||'mhd';
@@ -798,7 +855,7 @@ function checkNotifBar(){
 /* ══ SETTINGS ══ */
 function openSettings(){
   document.getElementById('warn-days-slider').value=warnDays;
-  updateDaysPreview(warnDays); updateNotifStatus();
+  updateDaysPreview(warnDays); updateNotifStatus(); updateSyncUI();
   document.getElementById('settings-overlay').classList.add('open');
 }
 function closeSettings(){document.getElementById('settings-overlay').classList.remove('open');}
@@ -851,6 +908,248 @@ function deleteAllFromSettings(){
   products=[];persist();render();showToast('🗑️ Alle Daten gelöscht');closeSettings();
 }
 
+/* ══ FIREBASE SYNC ══ */
+let fbApp = null;
+let fbDb = null;
+let fbRef = null;
+let householdId = null;
+let syncListener = null;
+let isSyncing = false;
+
+function getFbConfig() {
+  try { return JSON.parse(localStorage.getItem('fb_config') || 'null'); } catch(e) { return null; }
+}
+function saveFbConfig(cfg) { localStorage.setItem('fb_config', JSON.stringify(cfg)); }
+function getHouseholdId() { return localStorage.getItem('household_id') || null; }
+function saveHouseholdId(id) { localStorage.setItem('household_id', id); householdId = id; }
+function genCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return Array.from({length:6}, () => chars[Math.floor(Math.random()*chars.length)]).join('');
+}
+
+function initFirebase() {
+  const cfg = getFbConfig();
+  if (!cfg) return false;
+  try {
+    if (fbApp) { try { fbApp.delete(); } catch(e) {} }
+    fbApp = firebase.initializeApp({
+      apiKey: cfg.apiKey,
+      databaseURL: cfg.databaseURL,
+      projectId: cfg.projectId
+    }, 'kuehlschrank-' + Date.now());
+    fbDb = firebase.database(fbApp);
+    return true;
+  } catch(e) {
+    console.warn('Firebase init error:', e);
+    return false;
+  }
+}
+
+function startSync(hid) {
+  if (!fbDb) { if (!initFirebase()) return; }
+  if (syncListener) { fbRef && fbRef.off('value', syncListener); }
+  householdId = hid;
+  fbRef = fbDb.ref('households/' + hid + '/products');
+  syncListener = fbRef.on('value', snap => {
+    const data = snap.val();
+    if (data && !isSyncing) {
+      const remote = Object.values(data);
+      // Merge: remote wins for each product by id
+      const localIds = new Set(products.map(p => p.id));
+      const remoteIds = new Set(remote.map(p => p.id));
+      // Add/update from remote
+      remote.forEach(rp => {
+        const idx = products.findIndex(p => p.id === rp.id);
+        if (idx >= 0) products[idx] = rp;
+        else products.push(rp);
+      });
+      // Remove locally what was deleted remotely (only if we had it before)
+      products = products.filter(p => remoteIds.has(p.id) || !localIds.has(p.id));
+      localStorage.setItem('fridge_v2', JSON.stringify(products));
+      render();
+      if (document.getElementById('view-cal').classList.contains('active')) renderCal();
+    }
+    setSyncStatus('connected', 'Synchronisiert · Haushalt: ' + hid);
+  }, err => {
+    setSyncStatus('error', 'Sync-Fehler: ' + err.message);
+  });
+  setSyncStatus('syncing', 'Verbinde…');
+}
+
+function pushToFirebase() {
+  if (!fbRef || !householdId) return;
+  isSyncing = true;
+  const obj = {};
+  products.forEach(p => { obj[p.id] = p; });
+  fbRef.set(obj)
+    .then(() => { isSyncing = false; setSyncStatus('connected', 'Synchronisiert · Haushalt: ' + householdId); })
+    .catch(e => { isSyncing = false; setSyncStatus('error', 'Upload-Fehler: ' + e.message); });
+}
+
+function setSyncStatus(state, text) {
+  const bar = document.getElementById('sync-bar');
+  const dot = document.getElementById('sync-dot');
+  const txt = document.getElementById('sync-bar-text');
+  dot.className = 'sync-dot ' + state;
+  txt.textContent = text;
+  bar.className = 'sync-bar' + (state === 'error' ? ' warn' : '');
+  bar.style.display = state === 'offline' ? 'none' : 'flex';
+}
+
+function saveFirebaseConfig() {
+  const apiKey = document.getElementById('fb-apikey').value.trim();
+  const databaseURL = document.getElementById('fb-dburl').value.trim();
+  const projectId = document.getElementById('fb-projectid').value.trim();
+  if (!apiKey || !databaseURL || !projectId) { showToast('Bitte alle Felder ausfüllen'); return; }
+  saveFbConfig({ apiKey, databaseURL, projectId });
+  document.getElementById('firebase-config-section').style.display = 'none';
+  if (initFirebase()) {
+    // Create new household
+    const hid = genCode();
+    saveHouseholdId(hid);
+    startSync(hid);
+    pushToFirebase();
+    updateSyncUI();
+    showToast('✅ Firebase verbunden! Code: ' + hid);
+  } else {
+    showToast('❌ Firebase-Fehler – Config prüfen');
+  }
+}
+
+function joinHousehold() {
+  const code = document.getElementById('join-code-input').value.trim().toUpperCase();
+  if (code.length !== 6) { showToast('Bitte 6-stelligen Code eingeben'); return; }
+  if (!fbDb) { if (!initFirebase()) { showToast('Bitte zuerst Firebase einrichten'); return; } }
+  saveHouseholdId(code);
+  document.getElementById('join-section').style.display = 'none';
+  startSync(code);
+  updateSyncUI();
+  showToast('✅ Haushalt ' + code + ' beigetreten');
+}
+
+function leaveHousehold() {
+  if (!confirm('Synchronisierung beenden? Lokale Daten bleiben erhalten.')) return;
+  if (syncListener && fbRef) fbRef.off('value', syncListener);
+  syncListener = null; fbRef = null; householdId = null;
+  localStorage.removeItem('household_id');
+  setSyncStatus('offline', '');
+  updateSyncUI();
+  showToast('Synchronisierung beendet');
+}
+
+function updateSyncUI() {
+  const card = document.getElementById('sync-settings-card');
+  const cfg = getFbConfig();
+  const hid = getHouseholdId();
+
+  if (!cfg) {
+    // Not configured yet
+    card.innerHTML = \`
+      <div class="settings-row-title">Noch nicht eingerichtet</div>
+      <div class="settings-row-sub" style="margin-bottom:10px;">Einmalig Firebase verbinden, dann alle Geräte automatisch synchron.</div>
+      <button onclick="document.getElementById('firebase-config-section').style.display='block';document.getElementById('join-section').style.display='none'" style="width:100%;background:var(--blue);border:none;border-radius:var(--radius-sm);color:#fff;font-size:14px;font-weight:600;padding:11px;cursor:pointer;">🔥 Firebase einrichten</button>
+    \`;
+  } else if (!hid) {
+    // Configured but no household
+    card.innerHTML = \`
+      <div class="settings-row-title" style="margin-bottom:6px;">Firebase verbunden ✅</div>
+      <div class="settings-row-sub" style="margin-bottom:12px;">Wähle: neuen Haushalt erstellen oder einem bestehenden beitreten.</div>
+      <button onclick="createNewHousehold()" style="width:100%;background:var(--blue);border:none;border-radius:var(--radius-sm);color:#fff;font-size:14px;font-weight:600;padding:11px;cursor:pointer;margin-bottom:8px;">➕ Neuen Haushalt erstellen</button>
+      <button onclick="document.getElementById('join-section').style.display='block';document.getElementById('firebase-config-section').style.display='none'" style="width:100%;background:var(--green-lt);border:0.5px solid var(--green);border-radius:var(--radius-sm);color:var(--green);font-size:14px;font-weight:600;padding:11px;cursor:pointer;">🔗 Haushalt beitreten</button>
+    \`;
+  } else {
+    // Active household
+    card.innerHTML = \`
+      <div class="settings-row-title" style="margin-bottom:4px;">Aktiver Haushalt</div>
+      <div class="settings-row-sub" style="margin-bottom:8px;">Diesen Code auf dem anderen iPhone eingeben:</div>
+      <div class="household-code">\${hid}</div>
+      <div class="settings-row-sub" style="text-align:center;margin-bottom:12px;">Alle Geräte mit diesem Code sind synchronisiert.</div>
+      <button onclick="leaveHousehold()" style="width:100%;background:var(--red-lt);border:0.5px solid var(--red);border-radius:var(--radius-sm);color:var(--red);font-size:13px;font-weight:600;padding:10px;cursor:pointer;">Synchronisierung beenden</button>
+    \`;
+  }
+}
+
+function createNewHousehold() {
+  if (!fbDb) { if (!initFirebase()) return; }
+  const hid = genCode();
+  saveHouseholdId(hid);
+  startSync(hid);
+  pushToFirebase();
+  updateSyncUI();
+  showToast('✅ Haushalt erstellt: ' + hid);
+}
+
+/* ══ EXPORT / IMPORT ══ */
+function exportData(){
+  const backup = {
+    version: '1.3',
+    exportedAt: new Date().toISOString(),
+    products: products,
+    settings: { warnDays, sortMode }
+  };
+  const json = JSON.stringify(backup, null, 2);
+  const blob = new Blob([json], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const date = new Date().toISOString().split('T')[0];
+  a.href = url;
+  a.download = `kuehlschrank-backup-${date}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast(`✅ ${products.length} Produkte exportiert`);
+}
+
+function importData(event){
+  const file = event.target.files[0];
+  if(!file){ return; }
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      const backup = JSON.parse(e.target.result);
+      // Support both raw array and versioned backup object
+      const imported = Array.isArray(backup) ? backup : (backup.products || []);
+      if(!imported.length){ showToast('⚠️ Keine Produkte im Backup gefunden'); return; }
+
+      // Merge: imported products that don't exist yet (by id) get added
+      let added = 0, updated = 0;
+      imported.forEach(p => {
+        if(!p.id || !p.name || !p.mhd){ return; } // skip invalid entries
+        const existing = products.findIndex(x => x.id === p.id);
+        if(existing >= 0){
+          products[existing] = p; // overwrite with backup version
+          updated++;
+        } else {
+          products.push(p);
+          added++;
+        }
+      });
+
+      // Restore settings if present
+      if(!Array.isArray(backup) && backup.settings){
+        if(backup.settings.warnDays) {
+          warnDays = backup.settings.warnDays;
+          localStorage.setItem('warnDays', warnDays);
+        }
+        if(backup.settings.sortMode) {
+          sortMode = backup.settings.sortMode;
+          localStorage.setItem('sortMode', sortMode);
+          const ss = document.getElementById('sort-select');
+          if(ss) ss.value = sortMode;
+        }
+      }
+
+      persist();
+      render();
+      showToast(`✅ ${added} neu, ${updated} aktualisiert`);
+    } catch(err){
+      showToast('❌ Ungültige Backup-Datei');
+    }
+    // Reset file input so same file can be re-imported
+    event.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
 /* ══ TOAST ══ */
 function showToast(msg){
   const t=document.getElementById('toast');
@@ -878,6 +1177,13 @@ load();
 render();
 checkNotifBar();
 scheduleCheck();
+
+// Firebase sync init
+householdId = getHouseholdId();
+if (getFbConfig() && initFirebase() && householdId) {
+  startSync(householdId);
+}
+updateSyncUI();
 
 document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState==='visible'){
