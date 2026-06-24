@@ -9,10 +9,7 @@
 <meta name="theme-color" content="#1A5FA8">
 <link rel="manifest" href="./manifest.json">
 <title>Kühlschrank MHD</title>
-<script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.8.4/dist/quagga.min.js"></script>
-<!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
 <style>
 :root{
   --blue:#1A5FA8;--blue-lt:#E8F1FB;--blue-md:#2D7DD2;
@@ -440,6 +437,17 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,'SF Pro Text','H
 </div>
 
 <script>
+/* ══ DYNAMIC SCRIPT LOADER ══ */
+function loadScript(url) {
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = url;
+    s.onload = resolve;
+    s.onerror = () => { console.warn('Script failed to load:', url); resolve(); }; // resolve even on error
+    document.head.appendChild(s);
+  });
+}
+
 /* ══ STATE ══ */
 let products = [];
 let filter = 'all';
@@ -656,6 +664,13 @@ function renderCalDetail(ds) {
 async function startScanner() {
   const statusEl=document.getElementById('scan-status');
   const video=document.getElementById('video');
+
+  // Load Quagga lazily on first scanner open
+  if (typeof Quagga === 'undefined') {
+    statusEl.textContent = 'Scanner wird geladen…';
+    await loadScript('https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.8.4/dist/quagga.min.js');
+  }
+
   try {
     const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}},audio:false});
     nativeStream=stream; video.srcObject=stream;
@@ -935,6 +950,7 @@ function genCode() {
 function initFirebase() {
   const cfg = getFbConfig();
   if (!cfg) return false;
+  if (typeof firebase === 'undefined') return false; // SDK not loaded yet
   // Reuse existing instance if already initialized
   if (fbApp && fbDb) return true;
   try {
@@ -1050,6 +1066,7 @@ function leaveHousehold() {
 
 function updateSyncUI() {
   const card = document.getElementById('sync-settings-card');
+  if (!card) return; // settings not open yet
   const cfg = getFbConfig();
   const hid = getHouseholdId();
 
@@ -1186,18 +1203,12 @@ if('serviceWorker' in navigator){
 }
 
 /* ══ INIT ══ */
+// Run core UI immediately — no external scripts needed
 loadSettings();
 load();
 render();
 checkNotifBar();
 scheduleCheck();
-
-// Firebase sync init
-householdId = getHouseholdId();
-if (getFbConfig() && initFirebase() && householdId) {
-  startSync(householdId);
-}
-updateSyncUI();
 
 document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState==='visible'){
@@ -1206,6 +1217,25 @@ document.addEventListener('visibilitychange',()=>{
     if(document.getElementById('view-cal').classList.contains('active')) renderCal();
   }
 });
+
+// Load external scripts async — app stays fully functional without them
+(async () => {
+  // Load Quagga for barcode scanning (only needed when scanner opens)
+  // Load Firebase for sync
+  await loadScript('https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js');
+  await loadScript('https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js');
+
+  // Firebase sync init — only after SDK is loaded
+  try {
+    householdId = getHouseholdId();
+    if (getFbConfig() && initFirebase() && householdId) {
+      startSync(householdId);
+    }
+  } catch(e) {
+    console.warn('Firebase sync init failed:', e);
+  }
+  updateSyncUI();
+})();
 </script>
 </body>
 </html>
